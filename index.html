@@ -851,7 +851,7 @@
         '</div>'+
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
-        '<div class="pay-amt'+(overdue?" overdue":"\")+'" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
+        '<div class="pay-amt'+(overdue?" overdue":"")+'" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
         '<button class="pay-pill">Pay</button>';
       c.querySelector(".pay-del").addEventListener("click",function(e){ e.stopPropagation(); removePayment(p.id); });
       c.querySelector(".pay-dup").addEventListener("click",function(e){ e.stopPropagation(); state.payments.push({id:uid(),name:p.name,amount:p.amount,date:p.date}); persist(); renderPayments(); });
