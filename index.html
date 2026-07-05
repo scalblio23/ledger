@@ -188,8 +188,8 @@
   .pay-amt .pc{font-size:.45em;font-weight:600;vertical-align:top;margin-top:.3em;display:inline-block;color:rgba(248,113,113,.7)}
   .pay-amt .pcc{font-size:.6em;font-weight:700;color:rgba(248,113,113,.55)}
   .pay-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
-  .pay-pill{position:absolute;bottom:16px;right:16px;padding:6px 13px;border-radius:100px;background:linear-gradient(150deg,#8B5CF6,#22D3EE);border:none;color:#04060a;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.02em;z-index:3;transition:opacity .18s}
-  .pay-pill:hover{opacity:.85}
+  .pay-pill{position:absolute;bottom:14px;right:14px;padding:5px 12px;border-radius:100px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--muted);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;z-index:3;transition:color .18s,border-color .18s,background .18s}
+  .pay-pill:hover{color:var(--text);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.11)}
   /* payment log */
   .paylog-wrap{margin-top:32px}
   .paylog-head{font-size:14px;font-weight:500;letter-spacing:.02em;margin-bottom:14px;color:var(--text)}
@@ -886,26 +886,41 @@
     var m=money(p.amount);
     sheet.innerHTML=
       '<h3>Make payment</h3>'+
-      '<div style="margin-bottom:16px;font-size:14px;color:var(--muted)">'+esc(p.name)+'<br><span style="font-size:12px">Due '+fmtDate(p.date)+'</span></div>'+
-      '<div class="field"><label>Amount paid (AUD)</label><input id="pm_amt" type="number" step="0.01" placeholder="0.00"></div>'+
-      '<button id="pm_full" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;padding:8px 14px;border-radius:100px;background:linear-gradient(150deg,rgba(74,222,128,.15),rgba(34,211,238,.12));border:1px solid rgba(74,222,128,.3);color:var(--pos);font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500">'+
+      '<div style="margin-bottom:18px;font-size:14px;color:var(--muted)">'+esc(p.name)+'<br><span style="font-size:12px">Due '+fmtDate(p.date)+'</span></div>'+
+      '<div class="field two">'+
+        '<div><label>Amount paid (AUD)</label><input id="pm_amt" type="number" step="0.01" placeholder="0.00"></div>'+
+        '<div><label>Pay date</label><input id="pm_date" type="date" value="'+todayISO()+'"></div>'+
+      '</div>'+
+      '<button id="pm_full" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:20px;padding:8px 14px;border-radius:100px;background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.25);color:var(--pos);font-family:var(--font);font-size:13px;cursor:pointer;font-weight:500">'+
         '✓ Pay in full · $'+m.d+'.'+m.c+
       '</button>'+
+      '<div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:10px">Also add to cashflow</div>'+
+      '<label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);cursor:pointer;margin-bottom:20px">'+
+        '<input type="checkbox" id="pm_cf" checked style="accent-color:#8B5CF6;width:15px;height:15px;cursor:pointer">'+
+        'Add outgoing entry to cashflow table'+
+      '</label>'+
       '<div class="actions">'+
         '<button class="btn btn-ghost" id="pm_cancel">Cancel</button>'+
         '<button class="btn btn-primary" id="pm_save">Confirm payment</button>'+
       '</div>';
     var amtInput=sheet.querySelector("#pm_amt");
+    var dateInput=sheet.querySelector("#pm_date");
     sheet.querySelector("#pm_full").addEventListener("click",function(){ amtInput.value=p.amount; });
     sheet.querySelector("#pm_cancel").addEventListener("click",closeModal);
     sheet.querySelector("#pm_save").addEventListener("click",function(){
       var paid=Math.abs(parseFloat(amtInput.value)||0);
       if(!paid) return;
+      var payDate=dateInput.value||todayISO();
       if(!state.paylog) state.paylog=[];
-      var today=todayISO();
-      state.paylog.push({id:uid(),name:p.name,paid:paid,paidOn:fmtDate(today),billId:id});
+      state.paylog.push({id:uid(),name:p.name,paid:paid,paidOn:fmtDate(payDate),billId:id});
       if(paid>=p.amount) state.payments=state.payments.filter(function(x){return x.id!==id;});
-      persist(); renderPayments(); closeModal();
+      // add to cashflow if checked
+      if(sheet.querySelector("#pm_cf").checked){
+        if(!state.cashflow) state.cashflow=[];
+        state.cashflow.push({id:uid(),date:payDate,name:esc(p.name),amount:-paid});
+        selMonth=ym(payDate); cfHeroMonth=selMonth;
+      }
+      persist(); renderPayments(); updateHeroPeek(); closeModal();
     });
     modal.classList.add("open");
     setTimeout(function(){ amtInput.focus(); },50);
