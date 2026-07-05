@@ -176,7 +176,8 @@
   .pay-card::after{content:"";position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.15),transparent);pointer-events:none;border-radius:20px 20px 0 0}
   .pay-card:hover{transform:translateY(-3px);box-shadow:inset 0 1px 0 var(--sheen),0 22px 54px rgba(0,0,0,.68)}
   .pay-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
-  .pay-ic{width:34px;height:34px;border-radius:10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);display:flex;align-items:center;justify-content:center}
+  .pay-ic{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.06);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center}
+  .pay-ic.overdue{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.25)}
   .pay-ic svg{width:15px;height:15px}
   .pay-del{width:24px;height:24px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;opacity:0;transition:opacity .18s;z-index:2;position:relative}
   .pay-dup{width:24px;height:24px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;line-height:1;opacity:0;transition:opacity .18s;z-index:2;position:relative}
@@ -184,9 +185,12 @@
   .pay-name{font-size:15px;font-weight:500;letter-spacing:-.01em;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pay-date{font-size:12px;color:var(--muted)}
   .pay-date.overdue{color:var(--neg)}
-  .pay-amt{font-size:26px;font-weight:400;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--neg)}
-  .pay-amt .pc{font-size:.45em;font-weight:600;vertical-align:top;margin-top:.3em;display:inline-block;color:rgba(248,113,113,.7)}
-  .pay-amt .pcc{font-size:.6em;font-weight:700;color:rgba(248,113,113,.55)}
+  .pay-amt{font-size:26px;font-weight:400;letter-spacing:-.025em;font-variant-numeric:tabular-nums;color:var(--text)}
+  .pay-amt .pc{font-size:.45em;font-weight:600;vertical-align:top;margin-top:.3em;display:inline-block;color:var(--muted)}
+  .pay-amt .pcc{font-size:.6em;font-weight:700;color:var(--faint)}
+  .pay-amt.overdue{color:var(--neg)}
+  .pay-amt.overdue .pc{color:rgba(248,113,113,.7)}
+  .pay-amt.overdue .pcc{color:rgba(248,113,113,.55)}
   .pay-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
   .pay-pill{position:absolute;bottom:14px;right:14px;padding:5px 12px;border-radius:100px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--muted);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;z-index:3;transition:color .18s,border-color .18s,background .18s}
   .pay-pill:hover{color:var(--text);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.11)}
@@ -839,7 +843,7 @@
       c.className="pay-card";
       c.innerHTML=
         '<div class="pay-card-top">'+
-          '<div class="pay-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'+
+          '<div class="pay-ic'+(overdue?" overdue":"")+'"><svg viewBox="0 0 24 24" fill="none" stroke="'+(overdue?"#F87171":"rgba(255,255,255,.5)")+'" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'+
           '<div style="display:flex;gap:6px">'+
             '<button class="pay-dup" title="Duplicate">⧉</button>'+
             '<button class="pay-del" title="Delete">&times;</button>'+
@@ -847,7 +851,7 @@
         '</div>'+
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
-        '<div class="pay-amt" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
+        '<div class="pay-amt'+(overdue?" overdue":"\")+'" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
         '<button class="pay-pill">Pay</button>';
       c.querySelector(".pay-del").addEventListener("click",function(e){ e.stopPropagation(); removePayment(p.id); });
       c.querySelector(".pay-dup").addEventListener("click",function(e){ e.stopPropagation(); state.payments.push({id:uid(),name:p.name,amount:p.amount,date:p.date}); persist(); renderPayments(); });
