@@ -172,7 +172,7 @@
 
   /* payment cards */
   .pay-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:4px}
-  .pay-card{position:relative;padding:20px;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+  .pay-card{position:relative;padding:20px;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);cursor:pointer;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s;display:flex;flex-direction:column}
   .pay-card::after{content:"";position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.15),transparent);pointer-events:none;border-radius:20px 20px 0 0}
   .pay-card:hover{transform:translateY(-3px);box-shadow:inset 0 1px 0 var(--sheen),0 22px 54px rgba(0,0,0,.68)}
   .pay-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px}
@@ -192,7 +192,7 @@
   .pay-amt.overdue .pc{color:rgba(248,113,113,.7)}
   .pay-amt.overdue .pcc{color:rgba(248,113,113,.55)}
   .pay-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
-  .pay-pills{display:flex;gap:8px;margin-top:16px;position:relative;z-index:3}
+  .pay-pills{display:flex;gap:8px;margin-top:20px;position:relative;z-index:3}
   .pay-pill{flex:1;padding:7px 10px;border-radius:100px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--muted);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;text-align:center;transition:color .18s,border-color .18s,background .18s}
   .pay-pill:hover{color:var(--text);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.11)}
   .pay-cf-pill{flex:1;padding:7px 10px;border-radius:100px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);color:rgba(139,92,246,.7);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;text-align:center;transition:color .18s,border-color .18s,background .18s}
@@ -888,7 +888,7 @@
         '</div>'+
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
-        '<div class="pay-amt'+(overdue?" overdue":"")+'" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
+        '<div class="pay-amt'+(overdue?" overdue":"")+'" style="margin-top:14px;flex:1"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
         '<div class="pay-pills">'+
           '<button class="pay-pill">Pay</button>'+
           '<button class="pay-cf-pill">+ Cashflow</button>'+
