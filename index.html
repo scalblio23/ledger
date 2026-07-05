@@ -569,7 +569,17 @@
   var modal=document.getElementById("modal"), sheet=document.getElementById("sheet");
   function closeModal(){ modal.classList.remove("open"); }
   modal.addEventListener("click",function(e){ if(e.target===modal) closeModal(); });
-  document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeModal(); });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="Escape"){ closeModal(); return; }
+    if(e.key==="c"||e.key==="C"){
+      var tag=document.activeElement.tagName;
+      if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT") return;
+      if(modal.classList.contains("open")) return;
+      var cfPage=document.getElementById("page-cashflow");
+      if(cfPage && cfPage.classList.contains("active")) openCashflow();
+      else openEntry();
+    }
+  });
 
   function openAccount(id){
     var a = id ? state.accounts.find(function(x){return x.id===id;}) : {id:null,name:"",no:"",balance:0,color:"blue",sub:"",change:""};
