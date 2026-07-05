@@ -369,12 +369,16 @@
   // ---- storage ----
   var store = {
     load: async function(){
-      try{ if(!window.storage) return null; var r = await window.storage.get(KEY); return (r && r.value) ? JSON.parse(r.value) : null; }
-      catch(e){ return null; }
+      try{
+        if(window.storage){ var r=await window.storage.get(KEY); return (r&&r.value)?JSON.parse(r.value):null; }
+        var ls=localStorage.getItem(KEY); return ls?JSON.parse(ls):null;
+      }catch(e){ return null; }
     },
     save: async function(s){
-      try{ if(!window.storage) return; await window.storage.set(KEY, JSON.stringify(s)); }
-      catch(e){ console.error("save failed", e); }
+      try{
+        if(window.storage){ await window.storage.set(KEY,JSON.stringify(s)); return; }
+        localStorage.setItem(KEY,JSON.stringify(s));
+      }catch(e){ console.error("save failed",e); }
     }
   };
   var saveTimer=null;
@@ -720,7 +724,7 @@
     var nm=money(Math.abs(net));
     document.getElementById("cfNet").textContent=monthLabel(selMonth)+" · Net "+(net<0?"−$":"+$")+nm.d+"."+nm.c;
   }
-  function removeCashflow(id){ state.cashflow=state.cashflow.filter(function(e){return e.id!==id;}); persist(); renderCashflow(); }
+  function removeCashflow(id){ state.cashflow=state.cashflow.filter(function(e){return e.id!==id;}); persist(); renderCashflow(); updateHeroPeek(); }
 
   function openCashflow(){
     var dir="in";
@@ -744,8 +748,8 @@
       var date=sheet.querySelector("#c_date").value||todayISO();
       if(!state.cashflow) state.cashflow=[];
       state.cashflow.push({id:uid(),date:date,name:name,amount:dir==="out"?-amt:amt});
-      selMonth=ym(date);
-      persist(); renderCashflow(); closeModal();
+      selMonth=ym(date); cfHeroMonth=selMonth;
+      persist(); renderCashflow(); updateHeroPeek(); closeModal();
     });
     modal.classList.add("open");
     setTimeout(function(){ var n=sheet.querySelector("#c_amt"); if(n) n.focus(); },50);
