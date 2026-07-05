@@ -197,6 +197,8 @@
   .pay-pill:hover{color:var(--text);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.11)}
   .pay-cf-pill{flex:1;padding:7px 10px;border-radius:100px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);color:rgba(139,92,246,.7);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;text-align:center;transition:color .18s,border-color .18s,background .18s}
   .pay-cf-pill:hover{color:#a78bfa;border-color:rgba(139,92,246,.45);background:rgba(139,92,246,.14)}
+  .pay-cf-pill.scheduled{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);color:#a78bfa}
+  .pay-cf-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
   /* payment log */
   .paylog-wrap{margin-top:32px}
   .paylog-head{font-size:14px;font-weight:500;letter-spacing:.02em;margin-bottom:14px;color:var(--text)}
@@ -889,10 +891,15 @@
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
         '<div class="pay-amt'+(overdue?" overdue":"")+'" style="margin-top:14px;flex:1"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
-        '<div class="pay-pills">'+
-          '<button class="pay-pill">Pay</button>'+
-          '<button class="pay-cf-pill">+ Cashflow</button>'+
-        '</div>';
+        (function(){
+          var inCf=(state.cashflow||[]).some(function(e){return e.payId===p.id;});
+          return '<div class="pay-pills">'+
+            '<button class="pay-pill">Pay</button>'+
+            '<button class="pay-cf-pill'+(inCf?" scheduled":"")+'">'+
+              (inCf?'<span class="pay-cf-dot"></span>Scheduled':'+ Cashflow')+
+            '</button>'+
+          '</div>';
+        })();
       c.querySelector(".pay-del").addEventListener("click",function(e){ e.stopPropagation(); removePayment(p.id); });
       c.querySelector(".pay-dup").addEventListener("click",function(e){ e.stopPropagation(); state.payments.push({id:uid(),name:p.name,amount:p.amount,date:p.date}); persist(); renderPayments(); });
       c.querySelector(".pay-cf-pill").addEventListener("click",function(e){ e.stopPropagation(); openCfFromPay(p.id); });
@@ -987,7 +994,7 @@
     sheet.querySelector("#cf_save").addEventListener("click",function(){
       var d=dateInput.value||todayISO();
       if(!state.cashflow) state.cashflow=[];
-      state.cashflow.push({id:uid(),date:d,name:p.name,amount:-p.amount});
+      state.cashflow.push({id:uid(),date:d,name:p.name,amount:-p.amount,payId:id});
       selMonth=ym(d); cfHeroMonth=selMonth;
       persist(); renderCashflow(); updateHeroPeek(); closeModal();
     });
