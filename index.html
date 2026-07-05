@@ -47,7 +47,10 @@
   body.editing .editbtn{color:#04060a;background:linear-gradient(150deg,#8B5CF6,#22D3EE);border-color:transparent}
   .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(150deg,#33384A,#181B24);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#cfd3dd;box-shadow:inset 0 1px 0 var(--sheen)}
 
-  .hero{text-align:center;padding:26px 0 46px}
+  /* hero carousel */
+  .hero-track-wrap{overflow:hidden;position:relative}
+  .hero-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1);will-change:transform}
+  .hero-slide{min-width:100%;text-align:center;padding:26px 0 36px;flex-shrink:0}
   .hero-label{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);margin-bottom:20px}
   .hero-balance{font-weight:700;font-size:clamp(52px,10vw,92px);letter-spacing:-.045em;line-height:1;font-variant-numeric:tabular-nums;display:inline-flex;align-items:flex-start;gap:.1em}
   .hero-balance .cur{font-size:.42em;font-weight:600;color:var(--muted);margin-top:.42em;letter-spacing:-.02em}
@@ -55,6 +58,15 @@
   .hero-change{display:inline-flex;align-items:center;gap:8px;margin-top:24px;padding:8px 15px;border-radius:100px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen);font-size:13px;color:var(--muted)}
   .hero-change b{color:var(--pos);font-weight:500}
   .hero-change .dot{color:var(--faint)}
+  /* dots */
+  .hero-dots{display:flex;justify-content:center;gap:7px;margin-top:18px}
+  .hero-dot{width:6px;height:6px;border-radius:50%;background:var(--faint);cursor:pointer;transition:background .2s,transform .2s}
+  .hero-dot.active{background:var(--text);transform:scale(1.3)}
+  /* cf hero */
+  .cf-month-sel{display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:8px 14px;border-radius:100px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen);font-size:13px;color:var(--muted)}
+  .cf-month-sel select{background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:13px;outline:none;cursor:pointer;appearance:none;padding-right:4px}
+  .cf-month-sel select option{background:#14151a;color:var(--text)}
+  .hero-net-flows{display:flex;justify-content:center;gap:14px;margin-top:20px;flex-wrap:wrap}
 
   .flows{display:flex;justify-content:center;gap:14px;margin-top:34px;flex-wrap:wrap}
   .flow{display:flex;align-items:center;gap:11px;padding:13px 20px;border-radius:16px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 36px rgba(0,0,0,.5);backdrop-filter:blur(52px) saturate(230%) brightness(0.85);-webkit-backdrop-filter:blur(52px) saturate(230%) brightness(0.85)}
@@ -221,18 +233,51 @@
 
     <div id="page-overview" class="page active">
     <div class="hero fade" style="animation-delay:.08s">
-      <div class="hero-label">Total balance · AUD</div>
-      <div class="hero-balance" id="heroBal"></div>
-      <div class="hero-change" id="heroChange"></div>
-      <div class="flows">
-        <div class="flow in">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></div>
-          <div class="meta"><span>In</span><b id="flowIn">$0</b></div>
+      <div class="hero-track-wrap" id="heroTrackWrap">
+        <div class="hero-track" id="heroTrack">
+
+          <!-- slide 0: total balance -->
+          <div class="hero-slide">
+            <div class="hero-label">Total balance · AUD</div>
+            <div class="hero-balance" id="heroBal"></div>
+            <div class="hero-change" id="heroChange"></div>
+            <div class="flows">
+              <div class="flow in">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></div>
+                <div class="meta"><span>In</span><b id="flowIn">$0</b></div>
+              </div>
+              <div class="flow out">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg></div>
+                <div class="meta"><span>Out</span><b id="flowOut">$0</b></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- slide 1: cashflow projection -->
+          <div class="hero-slide">
+            <div class="hero-label">Cashflow projection · AUD</div>
+            <div class="hero-balance" id="heroNetBal"></div>
+            <div class="cf-month-sel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              <select id="heroMonthSel"></select>
+            </div>
+            <div class="hero-net-flows">
+              <div class="flow in">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg></div>
+                <div class="meta"><span>In</span><b id="cfFlowIn">$0</b></div>
+              </div>
+              <div class="flow out">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg></div>
+                <div class="meta"><span>Out</span><b id="cfFlowOut">$0</b></div>
+              </div>
+            </div>
+          </div>
+
         </div>
-        <div class="flow out">
-          <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg></div>
-          <div class="meta"><span>Out</span><b id="flowOut">$0</b></div>
-        </div>
+      </div>
+      <div class="hero-dots">
+        <div class="hero-dot active" data-slide="0"></div>
+        <div class="hero-dot" data-slide="1"></div>
       </div>
     </div>
 
@@ -352,6 +397,62 @@
 
   var IN_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="#4ADE80" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H9M17 7v8"/></svg>';
   var OUT_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.7)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M7 17h8M7 17V9"/></svg>';
+
+  // ---- hero carousel ----
+  var heroSlide = 0;
+  function setHeroSlide(i){
+    heroSlide = i;
+    document.getElementById("heroTrack").style.transform = "translateX("+(-i*100)+"%)";
+    Array.prototype.forEach.call(document.querySelectorAll(".hero-dot"), function(d){
+      d.classList.toggle("active", +d.getAttribute("data-slide")===i);
+    });
+    if(i===1) renderCfHero();
+  }
+  // dot clicks
+  document.addEventListener("DOMContentLoaded", function(){});
+  Array.prototype.forEach.call(document.querySelectorAll(".hero-dot"), function(d){
+    d.addEventListener("click", function(){ setHeroSlide(+d.getAttribute("data-slide")); });
+  });
+  // swipe
+  (function(){
+    var wrap = document.getElementById("heroTrackWrap"), sx=0;
+    wrap.addEventListener("touchstart", function(e){ sx=e.touches[0].clientX; }, {passive:true});
+    wrap.addEventListener("touchend", function(e){
+      var dx=e.changedTouches[0].clientX-sx;
+      if(Math.abs(dx)>40) setHeroSlide(dx<0 ? Math.min(heroSlide+1,1) : Math.max(heroSlide-1,0));
+    }, {passive:true});
+  })();
+
+  // ---- cashflow hero ----
+  var cfHeroMonth = todayISO().slice(0,7);
+  function buildCfHeroMonthSel(){
+    var sel = document.getElementById("heroMonthSel");
+    sel.innerHTML="";
+    var months = monthsList();
+    if(months.indexOf(cfHeroMonth)===-1) cfHeroMonth = months[0];
+    months.forEach(function(m){
+      var o=document.createElement("option");
+      o.value=m; o.textContent=monthLabel(m);
+      if(m===cfHeroMonth) o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.onchange = function(){ cfHeroMonth=sel.value; renderCfHero(); };
+  }
+  function renderCfHero(){
+    buildCfHeroMonthSel();
+    var list=(state.cashflow||[]).filter(function(e){ return ym(e.date)===cfHeroMonth; });
+    var inSum=0, outSum=0;
+    list.forEach(function(e){ if(+e.amount>=0) inSum+=(+e.amount||0); else outSum+=Math.abs(+e.amount||0); });
+    var net=inSum-outSum;
+    // big number
+    var el=document.getElementById("heroNetBal");
+    var m=money(Math.abs(net));
+    el.innerHTML='<span class="cur" style="color:'+(net<0?"var(--neg)":"var(--muted)")+'">'+(net<0?"−$":"$")+'</span>'+
+      '<span style="color:'+(net<0?"var(--neg)":"var(--text)")+'">'+m.d+'</span>'+
+      '<span class="cents" style="color:'+(net<0?"rgba(248,113,113,.5)":"var(--faint)")+'">.'+ m.c+'</span>';
+    document.getElementById("cfFlowIn").textContent="$"+inSum.toLocaleString("en-AU",{maximumFractionDigits:0});
+    document.getElementById("cfFlowOut").textContent="$"+outSum.toLocaleString("en-AU",{maximumFractionDigits:0});
+  }
 
   // ---- render ----
   function render(){
