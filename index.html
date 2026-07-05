@@ -179,7 +179,8 @@
   .pay-ic{width:34px;height:34px;border-radius:10px;background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);display:flex;align-items:center;justify-content:center}
   .pay-ic svg{width:15px;height:15px}
   .pay-del{width:24px;height:24px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;opacity:0;transition:opacity .18s;z-index:2;position:relative}
-  .pay-card:hover .pay-del{opacity:1}
+  .pay-dup{width:24px;height:24px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:var(--muted);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;line-height:1;opacity:0;transition:opacity .18s;z-index:2;position:relative}
+  .pay-card:hover .pay-del,.pay-card:hover .pay-dup{opacity:1}
   .pay-name{font-size:15px;font-weight:500;letter-spacing:-.01em;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .pay-date{font-size:12px;color:var(--muted)}
   .pay-date.overdue{color:var(--neg)}
@@ -816,13 +817,17 @@
       c.innerHTML=
         '<div class="pay-card-top">'+
           '<div class="pay-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>'+
-          '<button class="pay-del" title="Delete">&times;</button>'+
+          '<div style="display:flex;gap:6px">'+
+            '<button class="pay-dup" title="Duplicate">⧉</button>'+
+            '<button class="pay-del" title="Delete">&times;</button>'+
+          '</div>'+
         '</div>'+
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
         '<div class="pay-amt" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>';
       c.querySelector(".pay-del").addEventListener("click",function(e){ e.stopPropagation(); removePayment(p.id); });
-      c.addEventListener("click",function(e){ if(!e.target.closest(".pay-del")) openPayment(p.id); });
+      c.querySelector(".pay-dup").addEventListener("click",function(e){ e.stopPropagation(); state.payments.push({id:uid(),name:p.name,amount:p.amount,date:p.date}); persist(); renderPayments(); });
+      c.addEventListener("click",function(e){ if(!e.target.closest(".pay-del")&&!e.target.closest(".pay-dup")) openPayment(p.id); });
       grid.appendChild(c);
     });
     var tm=money(total);
