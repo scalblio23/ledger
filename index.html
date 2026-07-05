@@ -240,6 +240,20 @@
   .btn-primary{background:linear-gradient(150deg,#8B5CF6,#22D3EE);color:#04060a;font-weight:600;border-color:transparent}
   .btn-ghost{background:rgba(255,255,255,.05);color:var(--text)}
   .btn-danger{background:rgba(248,113,113,.1);color:var(--neg);border-color:rgba(248,113,113,.3)}
+  /* auth screen */
+  .auth-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+  .auth-screen.hidden{display:none}
+  .auth-box{width:100%;max-width:380px}
+  .auth-brand{display:flex;align-items:center;gap:11px;justify-content:center;margin-bottom:40px}
+  .auth-brand .mark{width:32px;height:32px;border-radius:10px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen);display:flex;align-items:center;justify-content:center}
+  .auth-brand .mark span{width:10px;height:10px;border-radius:3px;background:linear-gradient(150deg,#8B5CF6,#22D3EE)}
+  .auth-brand b{font-size:16px;font-weight:500}
+  .auth-title{font-size:22px;font-weight:600;letter-spacing:-.02em;text-align:center;margin-bottom:6px}
+  .auth-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:30px}
+  .auth-err{font-size:13px;color:var(--neg);text-align:center;margin-bottom:14px;min-height:18px}
+  .auth-toggle{text-align:center;margin-top:18px;font-size:13px;color:var(--muted)}
+  .auth-toggle a{color:var(--text);cursor:pointer;text-decoration:underline}
+
   .savedhint{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);z-index:70;padding:11px 20px;border-radius:100px;background:rgba(20,22,28,.9);border:1px solid var(--stroke);box-shadow:0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(20px);font-size:13px;color:var(--text);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
   .savedhint.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
@@ -259,7 +273,23 @@
   <div class="ambient"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div></div>
   <div class="grain"></div>
 
-  <div class="wrap">
+  <!-- auth screen -->
+  <div class="auth-screen" id="authScreen">
+    <div class="auth-box fade">
+      <div class="auth-brand"><div class="mark"><span></span></div><b>Ledger</b></div>
+      <div class="auth-title" id="authTitle">Welcome back</div>
+      <div class="auth-sub" id="authSub">Sign in to your account</div>
+      <div class="auth-err" id="authErr"></div>
+      <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input id="authPass" type="password" placeholder="••••••••" autocomplete="current-password"></div>
+      <div style="margin-top:6px">
+        <button class="btn btn-primary" id="authSubmit" style="width:100%;padding:15px">Sign in</button>
+      </div>
+      <div class="auth-toggle"><a id="authSwitch">Don't have an account? Register</a></div>
+    </div>
+  </div>
+
+  <div class="wrap" id="mainWrap" style="display:none">
     <div class="topbar fade" style="animation-delay:.02s">
       <div class="brand"><div class="mark"><span></span></div><b>Ledger</b></div>
       <div class="user">
@@ -267,7 +297,9 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
           <span id="editLabel">Edit</span>
         </button>
-        <div class="avatar">H</div>
+        <button id="logoutBtn" title="Sign out" style="background:none;border:none;cursor:pointer;padding:0;display:flex;align-items:center">
+          <div class="avatar" id="avatarEl">?</div>
+        </button>
       </div>
     </div>
 
@@ -390,7 +422,11 @@
 <script>
 (function(){
   "use strict";
-  var KEY = "ledger_dashboard_v2";
+  var USERS_KEY = "ledger_users_v1";
+  var SESSION_KEY = "ledger_session_v1";
+  var currentUser = null;
+  function dataKey(email){ return "ledger_data_v2_"+email; }
+  var KEY = "ledger_dashboard_v2"; // legacy fallback
   var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   var SWATCHES = {
@@ -429,17 +465,30 @@
   var store = {
     load: async function(){
       try{
-        if(window.storage){ var r=await window.storage.get(KEY); return (r&&r.value)?JSON.parse(r.value):null; }
-        var ls=localStorage.getItem(KEY); return ls?JSON.parse(ls):null;
+        var k=currentUser?dataKey(currentUser):KEY;
+        if(window.storage){ var r=await window.storage.get(k); return (r&&r.value)?JSON.parse(r.value):null; }
+        var ls=localStorage.getItem(k); return ls?JSON.parse(ls):null;
       }catch(e){ return null; }
     },
     save: async function(s){
       try{
-        if(window.storage){ await window.storage.set(KEY,JSON.stringify(s)); return; }
-        localStorage.setItem(KEY,JSON.stringify(s));
+        var k=currentUser?dataKey(currentUser):KEY;
+        if(window.storage){ await window.storage.set(k,JSON.stringify(s)); return; }
+        localStorage.setItem(k,JSON.stringify(s));
       }catch(e){ console.error("save failed",e); }
     }
   };
+
+  // ---- auth helpers ----
+  async function hashPass(p){
+    var buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(p));
+    return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,"0");}).join("");
+  }
+  function getUsers(){ try{ return JSON.parse(localStorage.getItem(USERS_KEY)||"[]"); }catch(e){ return []; } }
+  function saveUsers(u){ localStorage.setItem(USERS_KEY,JSON.stringify(u)); }
+  function getSession(){ return sessionStorage.getItem(SESSION_KEY)||null; }
+  function setSession(email){ sessionStorage.setItem(SESSION_KEY,email); }
+  function clearSession(){ sessionStorage.removeItem(SESSION_KEY); }
   var saveTimer=null;
   function persist(){
     store.save(state);
@@ -983,8 +1032,45 @@
   document.getElementById("addAccount").addEventListener("click",function(){ openAccount(null); });
   document.getElementById("addEntry").addEventListener("click",openEntry);
 
-  // ---- boot ----
-  (async function(){
+  // ---- auth UI ----
+  var authMode="login";
+  function setAuthMode(m){
+    authMode=m;
+    document.getElementById("authTitle").textContent=m==="login"?"Welcome back":"Create account";
+    document.getElementById("authSub").textContent=m==="login"?"Sign in to your account":"Register a new account";
+    document.getElementById("authSubmit").textContent=m==="login"?"Sign in":"Register";
+    document.getElementById("authSwitch").textContent=m==="login"?"Don't have an account? Register":"Already have an account? Sign in";
+    document.getElementById("authErr").textContent="";
+  }
+  document.getElementById("authSwitch").addEventListener("click",function(){ setAuthMode(authMode==="login"?"register":"login"); });
+  document.getElementById("authSubmit").addEventListener("click",doAuth);
+  document.getElementById("authScreen").addEventListener("keydown",function(e){ if(e.key==="Enter") doAuth(); });
+
+  async function doAuth(){
+    var email=(document.getElementById("authEmail").value||"").trim().toLowerCase();
+    var pass=document.getElementById("authPass").value||"";
+    var err=document.getElementById("authErr");
+    if(!email||!pass){ err.textContent="Please fill in all fields."; return; }
+    var hash=await hashPass(pass);
+    var users=getUsers();
+    if(authMode==="login"){
+      var u=users.find(function(x){return x.email===email;});
+      if(!u||u.hash!==hash){ err.textContent="Incorrect email or password."; return; }
+    } else {
+      if(users.find(function(x){return x.email===email;})){ err.textContent="An account with this email already exists."; return; }
+      users.push({email:email,hash:hash});
+      saveUsers(users);
+    }
+    setSession(email);
+    currentUser=email;
+    await bootDashboard();
+  }
+
+  async function bootDashboard(){
+    var email=currentUser;
+    document.getElementById("authScreen").classList.add("hidden");
+    document.getElementById("mainWrap").style.display="";
+    document.getElementById("avatarEl").textContent=email.charAt(0).toUpperCase();
     var loaded=await store.load();
     state = loaded && loaded.accounts ? loaded : JSON.parse(JSON.stringify(DEFAULT));
     var migrated=false;
@@ -993,6 +1079,40 @@
     if(!state.paylog){ state.paylog=[]; migrated=true; }
     if(!loaded || migrated) store.save(state);
     render();
+  }
+
+  document.getElementById("logoutBtn").addEventListener("click",function(){
+    clearSession();
+    currentUser=null;
+    state=JSON.parse(JSON.stringify(DEFAULT));
+    document.getElementById("mainWrap").style.display="none";
+    document.getElementById("authScreen").classList.remove("hidden");
+    document.getElementById("authEmail").value="";
+    document.getElementById("authPass").value="";
+    document.getElementById("authErr").textContent="";
+    setAuthMode("login");
+  });
+
+  // ---- boot ----
+  (async function(){
+    // seed Henry's account on first ever load
+    var HENRY="henryfortunatow@gmail.com";
+    var users=getUsers();
+    if(!users.find(function(u){return u.email===HENRY;})){
+      var hash=await hashPass("Bygodiam123!!");
+      users.push({email:HENRY,hash:hash});
+      saveUsers(users);
+      // migrate any existing localStorage data to Henry's account
+      var legacy=localStorage.getItem(KEY);
+      if(legacy) localStorage.setItem(dataKey(HENRY),legacy);
+    }
+    var session=getSession();
+    if(session && getUsers().find(function(u){return u.email===session;})){
+      currentUser=session;
+      await bootDashboard();
+    } else {
+      document.getElementById("authEmail").value="";
+    }
   })();
 })();
 </script>
