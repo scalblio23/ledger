@@ -413,7 +413,7 @@
     var arrow = net<0 ? "▼" : "▲";
     var sign  = net<0 ? "−$" : "$";
     badge.classList.toggle("neg", net<0);
-    badge.textContent = arrow+" "+sign+Math.abs(net).toLocaleString("en-AU",{minimumFractionDigits:0,maximumFractionDigits:0})+" · Cashflow "+monthLabel(cfHeroMonth);
+    badge.textContent = arrow+" "+sign+Math.abs(net).toLocaleString("en-AU",{minimumFractionDigits:0,maximumFractionDigits:0})+" · Expected Cashflow";
   }
   function setHeroSlide(i){
     heroSlide = i;
