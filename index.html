@@ -192,9 +192,10 @@
   .pay-amt.overdue .pc{color:rgba(248,113,113,.7)}
   .pay-amt.overdue .pcc{color:rgba(248,113,113,.55)}
   .pay-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
-  .pay-pill{position:absolute;bottom:14px;right:14px;padding:5px 12px;border-radius:100px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--muted);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;z-index:3;transition:color .18s,border-color .18s,background .18s}
+  .pay-pills{display:flex;gap:8px;margin-top:16px;position:relative;z-index:3}
+  .pay-pill{flex:1;padding:7px 10px;border-radius:100px;background:rgba(255,255,255,.07);border:1px solid var(--stroke);color:var(--muted);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;text-align:center;transition:color .18s,border-color .18s,background .18s}
   .pay-pill:hover{color:var(--text);border-color:rgba(255,255,255,.35);background:rgba(255,255,255,.11)}
-  .pay-cf-pill{position:absolute;bottom:14px;left:14px;padding:5px 12px;border-radius:100px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);color:rgba(139,92,246,.7);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;z-index:3;transition:color .18s,border-color .18s,background .18s}
+  .pay-cf-pill{flex:1;padding:7px 10px;border-radius:100px;background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);color:rgba(139,92,246,.7);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;text-align:center;transition:color .18s,border-color .18s,background .18s}
   .pay-cf-pill:hover{color:#a78bfa;border-color:rgba(139,92,246,.45);background:rgba(139,92,246,.14)}
   /* payment log */
   .paylog-wrap{margin-top:32px}
@@ -888,13 +889,15 @@
         '<div class="pay-name">'+esc(p.name)+'</div>'+
         '<div class="pay-date'+(overdue?" overdue":"")+'">'+fmtDate(p.date)+(overdue?" · Overdue":"")+'</div>'+
         '<div class="pay-amt'+(overdue?" overdue":"")+'" style="margin-top:14px"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
-        '<button class="pay-cf-pill">+ Cashflow</button>'+
-        '<button class="pay-pill">Pay</button>';
+        '<div class="pay-pills">'+
+          '<button class="pay-pill">Pay</button>'+
+          '<button class="pay-cf-pill">+ Cashflow</button>'+
+        '</div>';
       c.querySelector(".pay-del").addEventListener("click",function(e){ e.stopPropagation(); removePayment(p.id); });
       c.querySelector(".pay-dup").addEventListener("click",function(e){ e.stopPropagation(); state.payments.push({id:uid(),name:p.name,amount:p.amount,date:p.date}); persist(); renderPayments(); });
       c.querySelector(".pay-cf-pill").addEventListener("click",function(e){ e.stopPropagation(); openCfFromPay(p.id); });
       c.querySelector(".pay-pill").addEventListener("click",function(e){ e.stopPropagation(); openPayModal(p.id); });
-      c.addEventListener("click",function(e){ if(!e.target.closest(".pay-del")&&!e.target.closest(".pay-dup")&&!e.target.closest(".pay-pill")&&!e.target.closest(".pay-cf-pill")) openPayment(p.id); });
+      c.addEventListener("click",function(e){ if(!e.target.closest(".pay-del")&&!e.target.closest(".pay-dup")&&!e.target.closest(".pay-pills")) openPayment(p.id); });
       grid.appendChild(c);
     });
     var tm=money(total);
