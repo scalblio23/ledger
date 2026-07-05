@@ -47,6 +47,13 @@
   body.editing .editbtn{color:#04060a;background:linear-gradient(150deg,#8B5CF6,#22D3EE);border-color:transparent}
   .avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(150deg,#33384A,#181B24);border:1px solid var(--stroke);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;color:#cfd3dd;box-shadow:inset 0 1px 0 var(--sheen)}
 
+  /* hero peek pill */
+  .hero-peek{position:absolute;top:18px;right:0;display:flex;flex-direction:column;align-items:flex-end;gap:3px;cursor:pointer;opacity:.72;transition:opacity .2s}
+  .hero-peek:hover{opacity:1}
+  .hero-peek-label{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+  .hero-peek-val{font-size:22px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1}
+  .hero-peek-val .pc{font-size:.52em;font-weight:600;color:var(--muted);vertical-align:top;margin-top:.18em;display:inline-block}
+  .hero-peek-val .pcc{font-size:.65em;font-weight:700}
   /* hero carousel */
   .hero-track-wrap{overflow:hidden;position:relative}
   .hero-track{display:flex;transition:transform .45s cubic-bezier(.4,0,.2,1);will-change:transform}
@@ -232,7 +239,11 @@
     </div>
 
     <div id="page-overview" class="page active">
-    <div class="hero fade" style="animation-delay:.08s">
+    <div class="hero fade" style="animation-delay:.08s;position:relative">
+      <div class="hero-peek" id="heroPeek" title="Switch view">
+        <span class="hero-peek-label" id="heroPeekLabel"></span>
+        <span class="hero-peek-val" id="heroPeekVal"></span>
+      </div>
       <div class="hero-track-wrap" id="heroTrackWrap">
         <div class="hero-track" id="heroTrack">
 
@@ -400,6 +411,26 @@
 
   // ---- hero carousel ----
   var heroSlide = 0;
+  function updateHeroPeek(){
+    var label = document.getElementById("heroPeekLabel");
+    var val   = document.getElementById("heroPeekVal");
+    if(heroSlide === 0){
+      // show cashflow net for cfHeroMonth
+      var list=(state.cashflow||[]).filter(function(e){ return ym(e.date)===cfHeroMonth; });
+      var net=0; list.forEach(function(e){ net+=(+e.amount||0); });
+      var m=money(Math.abs(net));
+      label.textContent="Cashflow · "+monthLabel(cfHeroMonth);
+      val.style.color = net<0 ? "var(--neg)" : "var(--pos)";
+      val.innerHTML='<span class="pc">'+(net<0?"−$":"$")+'</span>'+m.d+'<span class="pcc">.'+m.c+'</span>';
+    } else {
+      // show total balance
+      var total=state.accounts.reduce(function(s,a){return s+(+a.balance||0);},0);
+      var m=money(Math.abs(total));
+      label.textContent="Total balance";
+      val.style.color = total<0 ? "var(--neg)" : "var(--text)";
+      val.innerHTML='<span class="pc">'+(total<0?"−$":"$")+'</span>'+m.d+'<span class="pcc">.'+m.c+'</span>';
+    }
+  }
   function setHeroSlide(i){
     heroSlide = i;
     document.getElementById("heroTrack").style.transform = "translateX("+(-i*100)+"%)";
@@ -407,7 +438,9 @@
       d.classList.toggle("active", +d.getAttribute("data-slide")===i);
     });
     if(i===1) renderCfHero();
+    updateHeroPeek();
   }
+  document.getElementById("heroPeek").addEventListener("click", function(){ setHeroSlide(heroSlide===0?1:0); });
   // dot clicks
   document.addEventListener("DOMContentLoaded", function(){});
   Array.prototype.forEach.call(document.querySelectorAll(".hero-dot"), function(d){
@@ -452,6 +485,7 @@
       '<span class="cents" style="color:'+(net<0?"rgba(248,113,113,.5)":"var(--faint)")+'">.'+ m.c+'</span>';
     document.getElementById("cfFlowIn").textContent="$"+inSum.toLocaleString("en-AU",{maximumFractionDigits:0});
     document.getElementById("cfFlowOut").textContent="$"+outSum.toLocaleString("en-AU",{maximumFractionDigits:0});
+    updateHeroPeek();
   }
 
   // ---- render ----
@@ -526,6 +560,7 @@
     });
 
     firstPaint=false;
+    updateHeroPeek();
   }
 
   function renderBalance(total){
