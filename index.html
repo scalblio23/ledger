@@ -207,29 +207,6 @@
   .pay-cf-pill.scheduled{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);color:#a78bfa}
   .pay-cf-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
   /* payment log */
-  /* ---- clients page ---- */
-  .cl-table{width:100%;border-collapse:collapse;margin-top:4px}
-  .cl-table th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:400;padding:14px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.09)}
-  .cl-table td{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.045);vertical-align:middle}
-  .cl-table tr:last-child td{border-bottom:none}
-  .cl-table tr:hover td{background:rgba(255,255,255,.025)}
-  .cl-name-cell{display:flex;align-items:center;gap:10px}
-  .cl-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;color:#fff}
-  .cl-name{font-size:14px;font-weight:500}
-  .cl-email{font-size:12px;color:var(--muted);margin-top:2px}
-  .cl-tasks-cell{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
-  .cl-task-pill{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:100px;font-size:12px;font-weight:500;cursor:pointer;transition:opacity .15s}
-  .cl-task-pill:hover{opacity:.75}
-  .cl-task-pill.done{opacity:.45;text-decoration:line-through}
-  .cl-task-pill .tpx{margin-left:2px;opacity:.5;font-size:10px;cursor:pointer}
-  .cl-task-pill .tpx:hover{opacity:1}
-  .cl-add-task{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:100px;background:transparent;border:1px dashed rgba(255,255,255,.18);color:var(--faint);font-family:var(--font);font-size:11px;cursor:pointer;transition:color .15s,border-color .15s}
-  .cl-add-task:hover{color:var(--muted);border-color:rgba(255,255,255,.35)}
-  .cl-del{width:26px;height:26px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:var(--muted);font-size:13px;cursor:pointer;opacity:0;transition:opacity .15s;display:flex;align-items:center;justify-content:center}
-  .cl-table tr:hover .cl-del{opacity:1}
-  .cl-wrap{position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82)}
-  .cl-wrap::after{content:"";position:absolute;top:0;left:0;right:0;height:60px;background:linear-gradient(180deg,rgba(255,255,255,.1),transparent);pointer-events:none}
-  .cl-empty{padding:52px 0;text-align:center;color:var(--faint);font-size:13px}
   .paylog-wrap{margin-top:32px}
   .paylog-head{font-size:14px;font-weight:500;letter-spacing:.02em;margin-bottom:14px;color:var(--text)}
   .paylog-list{position:relative;overflow:hidden;border-radius:18px;padding:4px 20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82)}
@@ -342,7 +319,6 @@
       <button class="navbtn active" data-page="overview">Overview</button>
       <button class="navbtn" data-page="cashflow">Cashflow</button>
       <button class="navbtn" data-page="payments">Payments</button>
-      <button class="navbtn" data-page="clients">Clients</button>
     </div>
 
     <div id="page-overview" class="page active">
@@ -446,25 +422,6 @@
         <div class="paylog-list" id="paylogList"></div>
       </div>
     </div><!-- /page-payments -->
-
-    <div id="page-clients" class="page">
-      <div class="sec-head" style="margin-top:4px">
-        <h2>Clients</h2>
-        <div class="right">
-          <button class="cfbtn" id="addClient">+ Add client</button>
-        </div>
-      </div>
-      <div class="cl-wrap">
-        <table class="cl-table" id="clTable">
-          <thead><tr>
-            <th>Client</th>
-            <th>Tasks</th>
-            <th style="width:40px"></th>
-          </tr></thead>
-          <tbody id="clBody"><tr><td colspan="3"><div class="cl-empty">No clients yet — press C to add one</div></td></tr></tbody>
-        </table>
-      </div>
-    </div><!-- /page-clients -->
   </div>
 
   <!-- editor modal -->
@@ -495,9 +452,7 @@
     entries:[],
     cashflow:[],
     payments:[],
-    paylog:[],
-    clients:[],
-    tasks:[]
+    paylog:[]
   };
 
   var state = JSON.parse(JSON.stringify(DEFAULT)), editing = false, firstPaint = true;
@@ -738,10 +693,8 @@
       if(modal.classList.contains("open")) return;
       var cfPage=document.getElementById("page-cashflow");
       var payPage=document.getElementById("page-payments");
-      var clPage=document.getElementById("page-clients");
       if(cfPage && cfPage.classList.contains("active")) openCashflow();
       else if(payPage && payPage.classList.contains("active")) openPayment(null);
-      else if(clPage && clPage.classList.contains("active")) openClient(null);
       else openEntry();
     }
   });
@@ -1094,132 +1047,6 @@
     setTimeout(function(){ var n=sheet.querySelector("#p_amt"); if(n) n.focus(); },50);
   }
   document.getElementById("addPayment").addEventListener("click",function(){ openPayment(null); });
-  document.getElementById("addClient").addEventListener("click",function(){ openClient(null); });
-
-  // ---- clients ----
-  var CL_COLORS=["#60A5FA","#34D399","#A78BFA","#FBBF24","#F472B6","#22D3EE","#FB923C","#818CF8"];
-  function clColor(id){ var n=0; for(var i=0;i<id.length;i++) n=(n+id.charCodeAt(i))%CL_COLORS.length; return CL_COLORS[n]; }
-  function clInitials(name){ return name.trim().split(/\s+/).slice(0,2).map(function(w){return w[0].toUpperCase();}).join(""); }
-
-  function renderClients(){
-    var body=document.getElementById("clBody");
-    if(!body) return;
-    var clients=state.clients||[];
-    if(!clients.length){
-      body.innerHTML='<tr><td colspan="3"><div class="cl-empty">No clients yet — press C to add one</div></td></tr>';
-      return;
-    }
-    body.innerHTML="";
-    clients.forEach(function(cl){
-      var tasks=(state.tasks||[]).filter(function(t){return t.clientId===cl.id;});
-      var color=clColor(cl.id);
-      var tr=document.createElement("tr");
-      var pillsHtml=tasks.map(function(t){
-        var bg=color+"22"; var border=color+"55";
-        return '<span class="cl-task-pill'+(t.done?" done":"")+'" style="background:'+bg+';border:1px solid '+border+';color:'+color+'" data-tid="'+t.id+'">'+
-          esc(t.name)+
-          '<span class="tpx" data-tid="'+t.id+'" data-action="del">&times;</span>'+
-        '</span>';
-      }).join("");
-      tr.innerHTML=
-        '<td><div class="cl-name-cell">'+
-          '<div class="cl-avatar" style="background:'+color+'33;border:1px solid '+color+'55;color:'+color+'">'+clInitials(cl.name)+'</div>'+
-          '<div><div class="cl-name">'+esc(cl.name)+'</div>'+(cl.email?'<div class="cl-email">'+esc(cl.email)+'</div>':'')+'</div>'+
-        '</div></td>'+
-        '<td><div class="cl-tasks-cell" id="tc-'+cl.id+'">'+
-          pillsHtml+
-          '<button class="cl-add-task" data-cid="'+cl.id+'">+ task</button>'+
-        '</div></td>'+
-        '<td><button class="cl-del" data-cid="'+cl.id+'">&times;</button></td>';
-      // task pill toggle done
-      tr.querySelectorAll(".cl-task-pill").forEach(function(pill){
-        pill.addEventListener("click",function(e){
-          if(e.target.dataset.action==="del") return;
-          var tid=pill.dataset.tid;
-          var t=state.tasks.find(function(x){return x.id===tid;});
-          if(t){ t.done=!t.done; persist(); renderClients(); }
-        });
-      });
-      // delete task pill
-      tr.querySelectorAll(".tpx").forEach(function(x){
-        x.addEventListener("click",function(e){
-          e.stopPropagation();
-          var tid=x.dataset.tid;
-          state.tasks=state.tasks.filter(function(t){return t.id!==tid;});
-          persist(); renderClients();
-        });
-      });
-      // add task
-      tr.querySelector(".cl-add-task").addEventListener("click",function(e){
-        e.stopPropagation(); openAddTask(cl.id);
-      });
-      // delete client
-      tr.querySelector(".cl-del").addEventListener("click",function(){
-        state.clients=state.clients.filter(function(c){return c.id!==cl.id;});
-        state.tasks=state.tasks.filter(function(t){return t.clientId!==cl.id;});
-        persist(); renderClients();
-      });
-      body.appendChild(tr);
-    });
-  }
-
-  function openClient(id){
-    var cl=id?state.clients.find(function(x){return x.id===id;}):null;
-    var isNew=!cl;
-    if(isNew) cl={id:null,name:"",email:""};
-    sheet.innerHTML=
-      '<h3>'+(isNew?"Add client":"Edit client")+'</h3>'+
-      '<div class="field"><label>Name</label><input id="cl_name" placeholder="e.g. Acme Corp" value="'+esc(cl.name)+'"></div>'+
-      '<div class="field"><label>Email (optional)</label><input id="cl_email" type="email" placeholder="client@example.com" value="'+esc(cl.email||"")+'"></div>'+
-      '<div class="actions">'+
-        (isNew?"":'<button class="btn btn-danger" id="cl_del">Delete</button>')+
-        '<button class="btn btn-ghost" id="cl_cancel">Cancel</button>'+
-        '<button class="btn btn-primary" id="cl_save">'+(isNew?"Add":"Save")+'</button>'+
-      '</div>';
-    var nameIn=sheet.querySelector("#cl_name");
-    if(!isNew) sheet.querySelector("#cl_del").addEventListener("click",function(){
-      state.clients=state.clients.filter(function(c){return c.id!==id;});
-      state.tasks=state.tasks.filter(function(t){return t.clientId!==id;});
-      persist(); renderClients(); closeModal();
-    });
-    sheet.querySelector("#cl_cancel").addEventListener("click",closeModal);
-    sheet.querySelector("#cl_save").addEventListener("click",function(){
-      var name=nameIn.value.trim();
-      if(!name) return;
-      var email=sheet.querySelector("#cl_email").value.trim();
-      if(isNew){
-        if(!state.clients) state.clients=[];
-        state.clients.push({id:uid(),name:name,email:email});
-      } else {
-        var c=state.clients.find(function(x){return x.id===id;});
-        if(c){c.name=name;c.email=email;}
-      }
-      persist(); renderClients(); closeModal();
-    });
-    modal.classList.add("open");
-    setTimeout(function(){ nameIn.focus(); },50);
-  }
-
-  function openAddTask(clientId){
-    sheet.innerHTML=
-      '<h3>Add task</h3>'+
-      '<div class="field"><label>Task</label><input id="tsk_name" placeholder="e.g. Send invoice"></div>'+
-      '<div class="actions">'+
-        '<button class="btn btn-ghost" id="tsk_cancel">Cancel</button>'+
-        '<button class="btn btn-primary" id="tsk_save">Add</button>'+
-      '</div>';
-    var nameIn=sheet.querySelector("#tsk_name");
-    sheet.querySelector("#tsk_cancel").addEventListener("click",closeModal);
-    sheet.querySelector("#tsk_save").addEventListener("click",function(){
-      var name=nameIn.value.trim();
-      if(!name) return;
-      if(!state.tasks) state.tasks=[];
-      state.tasks.push({id:uid(),clientId:clientId,name:name,done:false});
-      persist(); renderClients(); closeModal();
-    });
-    modal.classList.add("open");
-    setTimeout(function(){ nameIn.focus(); },50);
-  }
 
   // ---- page nav ----
   Array.prototype.forEach.call(document.querySelectorAll(".navbtn"),function(b){
@@ -1229,11 +1056,9 @@
       document.getElementById("page-overview").classList.toggle("active",page==="overview");
       document.getElementById("page-cashflow").classList.toggle("active",page==="cashflow");
       document.getElementById("page-payments").classList.toggle("active",page==="payments");
-      document.getElementById("page-clients").classList.toggle("active",page==="clients");
       document.getElementById("editToggle").style.display = page==="overview" ? "" : "none";
       if(page==="cashflow") renderCashflow();
       if(page==="payments") renderPayments();
-      if(page==="clients") renderClients();
     });
   });
 
