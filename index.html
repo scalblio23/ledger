@@ -210,6 +210,17 @@
   .pay-cf-pill.scheduled{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);color:#a78bfa}
   .pay-cf-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
   /* payment log */
+  /* ---- cashflow chart ---- */
+  .cf-chart{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);padding:20px 20px 12px}
+  .cf-chart::after{content:"";position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.1),transparent);pointer-events:none;border-radius:20px 20px 0 0}
+  .cf-chart-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;position:relative;z-index:1}
+  .cf-chart-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .cf-chart-bal{font-size:22px;font-weight:400;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .cf-chart-bal span{font-size:.55em;color:var(--muted)}
+  .cf-chart-svg{display:block;width:100%;position:relative;z-index:1}
+  .cf-chart-dates{display:flex;justify-content:space-between;margin-top:6px;position:relative;z-index:1}
+  .cf-chart-dates span{font-size:11px;color:var(--faint)}
+
   /* ---- wage tracker ---- */
   .wg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:4px}
   .wg-card{position:relative;padding:20px;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);cursor:pointer;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
@@ -436,6 +447,7 @@
           <span id="cfNet" style="font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums"></span>
         </div>
       </div>
+      <div id="cfChart" style="margin-bottom:20px"></div>
       <div class="tablewrap">
         <div class="cf-scroll">
           <div class="cf-head"><span>Date</span><span>Day</span><span class="ta">Amount</span><span>Item</span><span></span><span></span></div>
@@ -898,8 +910,118 @@
     while(d.getMonth()===month){ days.push(d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")); d.setDate(d.getDate()+1); }
     return days;
   }
+  function renderCfChart(){
+    var wrap=document.getElementById("cfChart"); if(!wrap) return;
+    var days=allDaysInMonth(selMonth);
+    var today=todayISO();
+    var curMonth=today.slice(0,7);
+    var isCurMonth=(selMonth===curMonth);
+
+    // base balance = current total accounts
+    var base=state.accounts.reduce(function(s,a){return s+(+a.balance||0);},0);
+
+    // build day -> net cashflow map for this month
+    var cfMap={};
+    (state.cashflow||[]).filter(function(e){return ym(e.date)===selMonth;})
+      .forEach(function(e){ cfMap[e.date]=(cfMap[e.date]||0)+(+e.amount||0); });
+
+    // compute running balance for each day
+    // for current month: base is account total at today; project backward before today and forward after
+    // for other months: base offset = 0 (relative projection from account total)
+    var points=[];
+    var running=base;
+
+    if(isCurMonth){
+      // walk forward from start of month using cashflow entries
+      // first compute balance at start of month (base minus cashflow from month-start to today)
+      var startBal=base;
+      days.forEach(function(d){ if(d<=today) startBal-=(cfMap[d]||0); });
+      running=startBal;
+    }
+
+    days.forEach(function(d){
+      running+=(cfMap[d]||0);
+      points.push({date:d,bal:running});
+    });
+
+    // compute y range with padding
+    var bals=points.map(function(p){return p.bal;});
+    var minB=Math.min.apply(null,bals), maxB=Math.max.apply(null,bals);
+    var range=Math.max(Math.abs(maxB-minB),1);
+    var pad=range*0.18;
+    var lo=minB-pad, hi=maxB+pad;
+    var H=90, W=600;
+
+    function px(i){ return Math.round((i/(points.length-1||1))*W); }
+    function py(v){ return Math.round(H-((v-lo)/(hi-lo))*H); }
+
+    // build smooth SVG path (cubic bezier through points)
+    var pts=points.map(function(p,i){return [px(i),py(p.bal)];});
+    var d="M"+pts[0][0]+","+pts[0][1];
+    for(var i=1;i<pts.length;i++){
+      var cp1x=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*0.45;
+      var cp1y=pts[i-1][1];
+      var cp2x=pts[i][0]-(pts[i][0]-pts[i-1][0])*0.45;
+      var cp2y=pts[i][1];
+      d+=" C"+cp1x+","+cp1y+" "+cp2x+","+cp2y+" "+pts[i][0]+","+pts[i][1];
+    }
+
+    // fill path (close down to bottom)
+    var fillD=d+" L"+pts[pts.length-1][0]+","+(H+2)+" L"+pts[0][0]+","+(H+2)+" Z";
+
+    // today marker
+    var todayMarker="";
+    if(isCurMonth){
+      var ti=days.indexOf(today);
+      if(ti>=0){
+        var tx=px(ti), ty=py(points[ti].bal);
+        todayMarker=
+          '<line x1="'+tx+'" y1="0" x2="'+tx+'" y2="'+H+'" stroke="rgba(245,158,11,.3)" stroke-width="1" stroke-dasharray="3,3"/>'+
+          '<circle cx="'+tx+'" cy="'+ty+'" r="3.5" fill="#f59e0b" opacity=".9"/>'+
+          '<circle cx="'+tx+'" cy="'+ty+'" r="6" fill="rgba(245,158,11,.15)"/>';
+      }
+    }
+
+    // end balance
+    var endBal=points[points.length-1].bal;
+    var em=money(Math.abs(endBal));
+    var isUp=endBal>=base-(isCurMonth?0:0);
+    var lineColor=endBal>=base?"#4ADE80":"#F87171";
+
+    wrap.innerHTML=
+      '<div class="cf-chart">'+
+        '<div class="cf-chart-meta">'+
+          '<div>'+
+            '<div class="cf-chart-label">Balance projection · '+monthLabel(selMonth)+'</div>'+
+            '<div class="cf-chart-bal">'+(endBal<0?"−":"")+'$'+em.d+'<span>.'+em.c+'</span> <span style="font-size:12px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span></div>'+
+          '</div>'+
+          '<div style="text-align:right">'+
+            '<div class="cf-chart-label">Start</div>'+
+            '<div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px">'+(function(){var sm=money(Math.abs(points[0].bal));return (points[0].bal<0?"−":"")+"$"+sm.d+"."+sm.c;})()+'</div>'+
+          '</div>'+
+        '</div>'+
+        '<svg class="cf-chart-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" height="90">'+
+          '<defs>'+
+            '<linearGradient id="cfFill" x1="0" y1="0" x2="0" y2="1">'+
+              '<stop offset="0%" stop-color="'+lineColor+'" stop-opacity="0.18"/>'+
+              '<stop offset="100%" stop-color="'+lineColor+'" stop-opacity="0.01"/>'+
+            '</linearGradient>'+
+          '</defs>'+
+          '<path d="'+fillD+'" fill="url(#cfFill)"/>'+
+          '<path d="'+d+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+          todayMarker+
+        '</svg>'+
+        '<div class="cf-chart-dates">'+
+          '<span>'+fmtDate(days[0])+'</span>'+
+          (isCurMonth&&days.indexOf(today)>0&&days.indexOf(today)<days.length-1?'<span style="color:rgba(245,158,11,.7)">Today</span>':'')+
+          '<span>'+fmtDate(days[days.length-1])+'</span>'+
+        '</div>'+
+      '</div>';
+  }
+
   function renderCashflow(){
     renderMonthBar();
+    renderCfChart();
     var body=document.getElementById("cfBody");
     body.innerHTML="";
     var days=allDaysInMonth(selMonth);
