@@ -741,6 +741,7 @@
             '<div class="s">'+esc(e.account||"")+' <span class="cat">'+(e.type==="in"?"· Income":"· Expense")+'</span> · '+esc(e.date||"")+'</div></div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'+
             '<div class="amt'+(e.type==="in"?" pos":"")+'">'+(e.type==="in"?"+":"−")+'$'+m.d+'<span class="c">.'+m.c+'</span></div>'+
+            (e.origUsd?'<div class="bal-after">USD '+e.origUsd.toFixed(2)+' @ '+(e.usdRate||1.58).toFixed(4)+'</div>':'')+
             (mb?'<div class="bal-after">'+(after<0?"−":"")+'$'+mb.d+'.'+mb.c+'</div>':'')+
           '</div>'+
           '<button class="rowdel" data-del-entry="'+e.id+'">&times;</button>';
@@ -849,31 +850,117 @@
     setTimeout(function(){ var n=sheet.querySelector("#f_name"); if(n) n.focus(); },50);
   }
 
+  var cachedUsdRate = null;
+  var cachedUsdRateAt = 0;
+  function getUsdRate(cb){
+    var now = Date.now();
+    // cache for 1 hour
+    if(cachedUsdRate && (now-cachedUsdRateAt)<3600000){ cb(cachedUsdRate); return; }
+    try{
+      fetch("https://api.exchangerate-api.com/v4/latest/USD")
+        .then(function(r){return r.json();})
+        .then(function(d){
+          var rate=d&&d.rates&&d.rates.AUD;
+          if(rate){ cachedUsdRate=rate; cachedUsdRateAt=now; }
+          cb(rate||1.58);
+        }).catch(function(){ cb(1.58); });
+    }catch(e){ cb(1.58); }
+  }
+
   function openEntry(){
     var type="out";
+    var currency="AUD";
     sheet.innerHTML=
       '<h3>Add transaction</h3>'+
       '<div class="seg" id="f_seg"><button data-t="in">In</button><button data-t="out" class="active">Out</button></div>'+
-      '<div class="field two"><div><label>Amount (AUD)</label><input id="f_amt" type="number" step="0.01" placeholder="0.00"></div>'+
-        '<div><label>Date</label><input id="f_date" type="date" value="'+todayISO()+'"></div></div>'+
+      '<div class="field two">'+
+        '<div>'+
+          '<label id="f_amtLabel">Amount (AUD)</label>'+
+          '<div style="display:flex;gap:8px;align-items:center">'+
+            '<input id="f_amt" type="number" step="0.01" placeholder="0.00" style="flex:1">'+
+            '<div class="seg" id="f_cur" style="flex:none;padding:0">'+
+              '<button data-c="AUD" class="active" style="padding:6px 10px;font-size:12px">AUD</button>'+
+              '<button data-c="USD" style="padding:6px 10px;font-size:12px">USD</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div><label>Date</label><input id="f_date" type="date" value="'+todayISO()+'"></div>'+
+      '</div>'+
+      '<div id="f_rateWrap" style="display:none" class="field">'+
+        '<label>USD → AUD rate <span id="f_rateNote" style="color:var(--faint);font-size:11px;margin-left:6px">fetching…</span></label>'+
+        '<div style="display:flex;gap:8px;align-items:center">'+
+          '<input id="f_rate" type="number" step="0.0001" placeholder="1.58" style="flex:1">'+
+          '<span id="f_audPreview" style="font-size:13px;color:var(--muted);white-space:nowrap;min-width:80px"></span>'+
+        '</div>'+
+      '</div>'+
       '<div class="field"><label>Item</label><input id="f_title" placeholder="e.g. Client payment"></div>'+
       '<div class="field"><label>Account</label><select id="f_acct"></select></div>'+
       '<div class="actions">'+
         '<button class="btn btn-ghost" id="f_cancel">Cancel</button>'+
         '<button class="btn btn-primary" id="f_save">Add</button>'+
       '</div>';
+
     var sel=sheet.querySelector("#f_acct");
     state.accounts.forEach(function(a){ var o=document.createElement("option"); o.value=a.name; o.textContent=a.name; sel.appendChild(o); });
+
     var seg=sheet.querySelector("#f_seg");
     seg.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b)return; type=b.getAttribute("data-t"); Array.prototype.forEach.call(seg.children,function(c){c.classList.remove("active");}); b.classList.add("active"); });
+
+    var curSeg=sheet.querySelector("#f_cur");
+    var rateWrap=sheet.querySelector("#f_rateWrap");
+    var rateInput=sheet.querySelector("#f_rate");
+    var rateNote=sheet.querySelector("#f_rateNote");
+    var audPreview=sheet.querySelector("#f_audPreview");
+    var amtInput=sheet.querySelector("#f_amt");
+    var amtLabel=sheet.querySelector("#f_amtLabel");
+
+    function updatePreview(){
+      if(currency!=="USD") return;
+      var usd=parseFloat(amtInput.value)||0;
+      var rate=parseFloat(rateInput.value)||0;
+      if(usd&&rate){
+        var aud=(usd*rate).toFixed(2);
+        audPreview.textContent="= AUD "+aud;
+      } else { audPreview.textContent=""; }
+    }
+    amtInput.addEventListener("input",updatePreview);
+    rateInput.addEventListener("input",updatePreview);
+
+    curSeg.addEventListener("click",function(e){
+      var b=e.target.closest("button"); if(!b) return;
+      currency=b.getAttribute("data-c");
+      Array.prototype.forEach.call(curSeg.children,function(c){c.classList.remove("active");}); b.classList.add("active");
+      if(currency==="USD"){
+        rateWrap.style.display="";
+        amtLabel.textContent="Amount (USD)";
+        // fetch live rate
+        getUsdRate(function(r){
+          rateInput.value=r.toFixed(4);
+          rateNote.textContent="live rate";
+          updatePreview();
+        });
+      } else {
+        rateWrap.style.display="none";
+        amtLabel.textContent="Amount (AUD)";
+      }
+    });
+
     sheet.querySelector("#f_cancel").addEventListener("click",closeModal);
     function saveEntry(){
-      var amt=Math.abs(parseFloat(sheet.querySelector("#f_amt").value)||0);
-      if(!amt) return;
+      var inputAmt=Math.abs(parseFloat(amtInput.value)||0);
+      if(!inputAmt) return;
       var date=sheet.querySelector("#f_date").value||todayISO();
       var title=sheet.querySelector("#f_title").value.trim()||"Untitled";
       var acct=sel.value||"";
-      state.entries.unshift({id:uid(),type:type,title:title,account:acct,date:date,amount:amt});
+      var amt=inputAmt;
+      var origUsd=null;
+      var rate=null;
+      if(currency==="USD"){
+        rate=parseFloat(rateInput.value)||1.58;
+        amt=Math.round(inputAmt*rate*100)/100;
+        origUsd=inputAmt;
+      }
+      state.entries.unshift({id:uid(),type:type,title:title,account:acct,date:date,amount:amt,origUsd:origUsd,usdRate:rate});
       if(acct){
         var account=state.accounts.find(function(a){return a.name===acct;});
         if(account) account.balance=(+account.balance||0)+(type==="in"?amt:-amt);
@@ -883,7 +970,7 @@
     sheet.querySelector("#f_save").addEventListener("click",saveEntry);
     sheet.addEventListener("keydown",function(e){ if(e.key==="Enter"&&document.activeElement.tagName!=="BUTTON") saveEntry(); });
     modal.classList.add("open");
-    setTimeout(function(){ var n=sheet.querySelector("#f_amt"); if(n) n.focus(); },50);
+    setTimeout(function(){ amtInput.focus(); },50);
   }
 
   // ---- cashflow projection ----
