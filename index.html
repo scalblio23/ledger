@@ -210,6 +210,38 @@
   .pay-cf-pill.scheduled{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.4);color:#a78bfa}
   .pay-cf-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
   /* payment log */
+  /* ---- wage tracker ---- */
+  .wg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:4px}
+  .wg-card{position:relative;padding:20px;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);cursor:pointer;display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+  .wg-card::after{content:"";position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.15),transparent);pointer-events:none;border-radius:20px 20px 0 0}
+  .wg-card:hover{transform:translateY(-3px);box-shadow:inset 0 1px 0 var(--sheen),0 22px 54px rgba(0,0,0,.68)}
+  .wg-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+  .wg-ic{width:34px;height:34px;border-radius:10px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);display:flex;align-items:center;justify-content:center}
+  .wg-ic svg{width:15px;height:15px}
+  .wg-del{width:24px;height:24px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1;opacity:0;transition:opacity .18s;z-index:2;position:relative}
+  .wg-card:hover .wg-del{opacity:1}
+  .wg-name{font-size:15px;font-weight:500;letter-spacing:-.01em;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wg-range{font-size:12px;color:var(--muted);margin-bottom:14px}
+  .wg-total{font-size:26px;font-weight:400;letter-spacing:-.025em;font-variant-numeric:tabular-nums;flex:1}
+  .wg-total .pc{font-size:.45em;font-weight:600;vertical-align:top;margin-top:.3em;display:inline-block;color:var(--muted)}
+  .wg-total .pcc{font-size:.6em;font-weight:700;color:var(--faint)}
+  .wg-meta{font-size:11px;color:var(--faint);margin-bottom:14px}
+  .wg-send-pill{flex:none;align-self:flex-start;padding:7px 12px;border-radius:100px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.22);color:rgba(251,191,36,.75);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;transition:color .18s,border-color .18s,background .18s;margin-top:14px}
+  .wg-send-pill:hover{color:#fbbf24;border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.14)}
+  .wg-send-pill.sent{background:rgba(74,222,128,.10);border-color:rgba(74,222,128,.25);color:rgba(74,222,128,.8);cursor:default}
+  .wg-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
+  .wg-bill-wrap{margin-top:32px}
+  .wg-bill-table{width:100%;border-collapse:collapse}
+  .wg-bill-table th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:400;padding:14px 16px;text-align:left;border-bottom:1px solid rgba(255,255,255,.09)}
+  .wg-bill-table th.ta{text-align:right}
+  .wg-bill-table td{padding:13px 16px;border-bottom:1px solid rgba(255,255,255,.045);font-size:14px;vertical-align:middle}
+  .wg-bill-table tr:last-child td{border-bottom:none}
+  .wg-bill-table tr:hover td{background:rgba(255,255,255,.025)}
+  .wg-bill-table td.ta{text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+  .wg-bill-table .wg-sent-tag{display:inline-block;font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:rgba(74,222,128,.8);background:rgba(74,222,128,.10);border:1px solid rgba(74,222,128,.2);border-radius:100px;padding:2px 8px;margin-left:8px;vertical-align:middle}
+  .wg-total-row td{border-top:1px solid rgba(255,255,255,.1)!important;font-weight:600;color:var(--text)}
+  .wg-bill-list{position:relative;overflow:hidden;border-radius:18px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82)}
+  .wg-bill-list::after{content:"";position:absolute;top:0;left:0;right:0;height:60px;background:linear-gradient(180deg,rgba(255,255,255,.1),transparent);pointer-events:none}
   .paylog-wrap{margin-top:32px}
   .paylog-head{font-size:14px;font-weight:500;letter-spacing:.02em;margin-bottom:14px;color:var(--text)}
   .paylog-list{position:relative;overflow:hidden;border-radius:18px;padding:4px 20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 40px rgba(0,0,0,.5);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82)}
@@ -322,6 +354,7 @@
       <button class="navbtn active" data-page="overview">Overview</button>
       <button class="navbtn" data-page="cashflow">Cashflow</button>
       <button class="navbtn" data-page="payments">Payments</button>
+      <button class="navbtn" data-page="wages">Wages</button>
     </div>
 
     <div id="page-overview" class="page active">
@@ -426,6 +459,28 @@
         <div class="paylog-list" id="paylogList"></div>
       </div>
     </div><!-- /page-payments -->
+
+    <div id="page-wages" class="page">
+      <div class="sec-head" style="margin-top:4px">
+        <h2>Wage Tracker</h2>
+        <div class="right">
+          <button class="cfbtn" id="addWage">+ Add staff</button>
+          <span id="wgTotal" style="font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums"></span>
+        </div>
+      </div>
+      <div class="wg-grid" id="wgGrid"></div>
+      <div class="wg-bill-wrap" id="wgBillWrap" style="display:none">
+        <div class="sec-head" style="margin:28px 4px 14px"><h2>Upcoming wage bill</h2></div>
+        <div class="wg-bill-list">
+          <table class="wg-bill-table">
+            <thead><tr>
+              <th>Staff</th><th>Date range</th><th class="ta">Hours</th><th class="ta">Rate</th><th class="ta">Total</th><th class="ta">Cashflow</th>
+            </tr></thead>
+            <tbody id="wgBillBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /page-wages -->
   </div>
 
   <!-- editor modal -->
@@ -456,7 +511,8 @@
     entries:[],
     cashflow:[],
     payments:[],
-    paylog:[]
+    paylog:[],
+    wages:[]
   };
 
   var state = JSON.parse(JSON.stringify(DEFAULT)), editing = false, firstPaint = true;
@@ -727,8 +783,10 @@
       if(modal.classList.contains("open")) return;
       var cfPage=document.getElementById("page-cashflow");
       var payPage=document.getElementById("page-payments");
+      var wgPage=document.getElementById("page-wages");
       if(cfPage && cfPage.classList.contains("active")) openCashflow();
       else if(payPage && payPage.classList.contains("active")) openPayment(null);
+      else if(wgPage && wgPage.classList.contains("active")) openWage(null);
       else openEntry();
     }
   });
@@ -1088,6 +1146,135 @@
     setTimeout(function(){ var n=sheet.querySelector("#p_amt"); if(n) n.focus(); },50);
   }
   document.getElementById("addPayment").addEventListener("click",function(){ openPayment(null); });
+  document.getElementById("addWage").addEventListener("click",function(){ openWage(null); });
+
+  // ---- wages ----
+  var PERSON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>';
+
+  function wgTotal(w){ return Math.round((+w.hours||0)*(+w.rate||0)*100)/100; }
+
+  function renderWages(){
+    var grid=document.getElementById("wgGrid");
+    var billWrap=document.getElementById("wgBillWrap");
+    var billBody=document.getElementById("wgBillBody");
+    var totalEl=document.getElementById("wgTotal");
+    if(!grid||!billBody) return;
+    var wages=state.wages||[];
+    grid.innerHTML="";
+    if(!wages.length){
+      grid.innerHTML='<div class="wg-empty">No staff added yet — press C to add one</div>';
+      billWrap.style.display="none";
+      totalEl.textContent="";
+      return;
+    }
+    wages.forEach(function(w){
+      var tot=wgTotal(w);
+      var m=money(tot);
+      var card=document.createElement("div");
+      card.className="wg-card";
+      card.innerHTML=
+        '<div class="wg-card-top">'+
+          '<div class="wg-ic">'+PERSON_SVG+'</div>'+
+          '<button class="wg-del" title="Delete">&times;</button>'+
+        '</div>'+
+        '<div class="wg-name">'+esc(w.name)+'</div>'+
+        '<div class="wg-range">'+esc(w.dateFrom)+' – '+esc(w.dateTo)+'</div>'+
+        '<div class="wg-meta">'+esc(String(w.hours))+'h × $'+esc(String(w.rate))+'/hr</div>'+
+        '<div class="wg-total"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
+        '<button class="wg-send-pill'+(w.sent?" sent":"")+'">'+
+          (w.sent?'✓ In Cashflow':'→ Send to Cashflow')+
+        '</button>';
+      card.querySelector(".wg-del").addEventListener("click",function(e){ e.stopPropagation(); removeWage(w.id); });
+      card.querySelector(".wg-send-pill").addEventListener("click",function(e){ e.stopPropagation(); if(!w.sent) sendWageToCashflow(w.id); });
+      card.addEventListener("click",function(e){ if(!e.target.closest(".wg-del")&&!e.target.closest(".wg-send-pill")) openWage(w.id); });
+      grid.appendChild(card);
+    });
+    // bill table
+    billWrap.style.display="";
+    billBody.innerHTML="";
+    var grandTotal=0;
+    wages.forEach(function(w){
+      var tot=wgTotal(w);
+      grandTotal+=tot;
+      var m=money(tot);
+      var tr=document.createElement("tr");
+      tr.innerHTML=
+        '<td>'+esc(w.name)+(w.sent?'<span class="wg-sent-tag">Cashflow</span>':'')+'</td>'+
+        '<td style="color:var(--muted);font-size:13px">'+esc(w.dateFrom)+' – '+esc(w.dateTo)+'</td>'+
+        '<td class="ta">'+esc(String(w.hours))+'h</td>'+
+        '<td class="ta" style="color:var(--muted)">$'+esc(String(w.rate))+'/hr</td>'+
+        '<td class="ta">$'+m.d+'.'+m.c+'</td>'+
+        '<td class="ta"><button class="wg-send-pill'+(w.sent?" sent":"")+'" style="position:relative;z-index:1">'+
+          (w.sent?'✓ Sent':'→ Send')+
+        '</button></td>';
+      tr.querySelector(".wg-send-pill").addEventListener("click",function(){ if(!w.sent) sendWageToCashflow(w.id); });
+      billBody.appendChild(tr);
+    });
+    var gm=money(grandTotal);
+    var totRow=document.createElement("tr");
+    totRow.className="wg-total-row";
+    totRow.innerHTML='<td colspan="4" style="color:var(--muted);font-size:13px">Total wage bill</td><td class="ta">$'+gm.d+'.'+gm.c+'</td><td></td>';
+    billBody.appendChild(totRow);
+    totalEl.textContent="Total · $"+gm.d+"."+gm.c;
+  }
+
+  function removeWage(id){
+    state.wages=state.wages.filter(function(w){return w.id!==id;});
+    persist(); renderWages();
+  }
+
+  function sendWageToCashflow(id){
+    var w=state.wages.find(function(x){return x.id===id;}); if(!w||w.sent) return;
+    if(!state.cashflow) state.cashflow=[];
+    var tot=wgTotal(w);
+    state.cashflow.push({id:uid(),date:w.dateTo,name:"Wages – "+w.name,amount:-tot,wageId:id});
+    w.sent=true;
+    selMonth=ym(w.dateTo); cfHeroMonth=selMonth;
+    persist(); renderWages(); updateHeroPeek();
+  }
+
+  function openWage(id){
+    var w=id?state.wages.find(function(x){return x.id===id;}):null;
+    var isNew=!w;
+    if(isNew) w={id:null,name:"",rate:0,hours:0,dateFrom:todayISO(),dateTo:todayISO(),sent:false};
+    sheet.innerHTML=
+      '<h3>'+(isNew?"Add staff":"Edit staff")+'</h3>'+
+      '<div class="field"><label>Name</label><input id="wg_name" placeholder="e.g. Jane Smith" value="'+esc(w.name)+'"></div>'+
+      '<div class="field two">'+
+        '<div><label>Hourly rate (AUD)</label><input id="wg_rate" type="number" step="0.01" placeholder="0.00" value="'+(isNew?"":w.rate)+'"></div>'+
+        '<div><label>Hours</label><input id="wg_hrs" type="number" step="0.5" placeholder="0" value="'+(isNew?"":w.hours)+'"></div>'+
+      '</div>'+
+      '<div class="field two">'+
+        '<div><label>Date from</label><input id="wg_from" type="date" value="'+w.dateFrom+'"></div>'+
+        '<div><label>Date to</label><input id="wg_to" type="date" value="'+w.dateTo+'"></div>'+
+      '</div>'+
+      '<div class="actions">'+
+        (isNew?"":'<button class="btn btn-danger" id="wg_del">Delete</button>')+
+        '<button class="btn btn-ghost" id="wg_cancel">Cancel</button>'+
+        '<button class="btn btn-primary" id="wg_save">'+(isNew?"Add":"Save")+'</button>'+
+      '</div>';
+    if(!isNew) sheet.querySelector("#wg_del").addEventListener("click",function(){ removeWage(id); closeModal(); });
+    sheet.querySelector("#wg_cancel").addEventListener("click",closeModal);
+    function saveWage(){
+      var name=sheet.querySelector("#wg_name").value.trim(); if(!name) return;
+      var rate=Math.abs(parseFloat(sheet.querySelector("#wg_rate").value)||0);
+      var hours=Math.abs(parseFloat(sheet.querySelector("#wg_hrs").value)||0);
+      var dateFrom=sheet.querySelector("#wg_from").value||todayISO();
+      var dateTo=sheet.querySelector("#wg_to").value||todayISO();
+      if(isNew){
+        if(!state.wages) state.wages=[];
+        state.wages.push({id:uid(),name:name,rate:rate,hours:hours,dateFrom:dateFrom,dateTo:dateTo,sent:false});
+      } else {
+        var entry=state.wages.find(function(x){return x.id===id;});
+        if(entry){ entry.name=name; entry.rate=rate; entry.hours=hours; entry.dateFrom=dateFrom; entry.dateTo=dateTo; }
+      }
+      persist(); renderWages(); closeModal();
+    }
+    sheet.querySelector("#wg_save").addEventListener("click",saveWage);
+    sheet.addEventListener("keydown",function(e){ if(e.key==="Enter"&&document.activeElement.tagName!=="BUTTON") saveWage(); });
+    modal.classList.add("open");
+    setTimeout(function(){ sheet.querySelector("#wg_name").focus(); },50);
+  }
 
   // ---- page nav ----
   Array.prototype.forEach.call(document.querySelectorAll(".navbtn"),function(b){
@@ -1097,9 +1284,11 @@
       document.getElementById("page-overview").classList.toggle("active",page==="overview");
       document.getElementById("page-cashflow").classList.toggle("active",page==="cashflow");
       document.getElementById("page-payments").classList.toggle("active",page==="payments");
+      document.getElementById("page-wages").classList.toggle("active",page==="wages");
       document.getElementById("editToggle").style.display = page==="overview" ? "" : "none";
       if(page==="cashflow") renderCashflow();
       if(page==="payments") renderPayments();
+      if(page==="wages") renderWages();
     });
   });
 
