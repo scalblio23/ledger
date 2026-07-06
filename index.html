@@ -152,6 +152,11 @@
   .cf-head{padding:16px 0 13px;border-bottom:1px solid rgba(255,255,255,.09);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
   .cf-head .ta,.cf-grp .ta,.cf-row .ta{text-align:right}
   .cf-grp{padding:15px 0 9px;margin-top:4px}
+  .cf-compact .cf-grp{padding:6px 0;margin-top:0;border-bottom:1px solid rgba(255,255,255,.04)}
+  .cf-compact .cf-grp:last-child{border-bottom:none}
+  .cf-compact .cf-grp .cf-date{font-size:13px}
+  .cf-compact .cf-grp .cf-day{font-size:12px}
+  .cf-compact .cf-grp .cf-amt{font-size:13px}
   .cf-grp .cf-date{font-size:14px;font-weight:600;letter-spacing:-.01em}
   .cf-grp .cf-day{font-size:13px;color:var(--muted)}
   .cf-grp.today .cf-date{color:#f59e0b;text-shadow:0 0 12px rgba(245,158,11,.5)}
@@ -444,6 +449,7 @@
         <h2>Cashflow projection</h2>
         <div class="right">
           <button class="cfbtn" id="addCashflow">+ Add entry</button>
+          <button class="cfbtn" id="cfViewToggle" style="color:var(--muted);font-size:12px;letter-spacing:.04em">Compact</button>
           <span id="cfNet" style="font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums"></span>
         </div>
       </div>
@@ -529,6 +535,7 @@
 
   var state = JSON.parse(JSON.stringify(DEFAULT)), editing = false, firstPaint = true;
   var selMonth = null;
+  var cfCompact = false;
 
   // ---- storage ----
   var store = {
@@ -1028,6 +1035,9 @@
     renderCfChart();
     var body=document.getElementById("cfBody");
     body.innerHTML="";
+    body.classList.toggle("cf-compact",cfCompact);
+    var tog=document.getElementById("cfViewToggle");
+    if(tog){ tog.textContent=cfCompact?"Expanded":"Compact"; tog.style.color=cfCompact?"#22D3EE":"var(--muted)"; }
     var days=allDaysInMonth(selMonth);
     var groups={};
     (state.cashflow||[]).filter(function(e){ return ym(e.date)===selMonth; })
@@ -1047,6 +1057,7 @@
         '<span class="cf-name">'+(items.length?items.length+" item"+(items.length>1?"s":""):"")+'</span>'+
         '<span></span><span></span>';
       body.appendChild(g);
+      if(cfCompact) return;
       items.forEach(function(e){
         var m=money(Math.abs(e.amount));
         var r=document.createElement("div");
@@ -1102,6 +1113,7 @@
     setTimeout(function(){ var n=sheet.querySelector("#c_amt"); if(n) n.focus(); },50);
   }
   document.getElementById("addCashflow").addEventListener("click",openCashflow);
+  document.getElementById("cfViewToggle").addEventListener("click",function(){ cfCompact=!cfCompact; renderCashflow(); });
 
   // ---- payments ----
   function renderPayments(){
