@@ -674,7 +674,14 @@
 
   // ---- mutations ----
   function removeAccount(id){ state.accounts=state.accounts.filter(function(a){return a.id!==id;}); persist(); render(); }
-  function removeEntry(id){ state.entries=state.entries.filter(function(e){return e.id!==id;}); persist(); render(); }
+  function removeEntry(id){
+    var e=state.entries.find(function(x){return x.id===id;});
+    if(e&&e.account){
+      var account=state.accounts.find(function(a){return a.name===e.account;});
+      if(account) account.balance=(+account.balance||0)-(e.type==="in"?(+e.amount||0):-(+e.amount||0));
+    }
+    state.entries=state.entries.filter(function(x){return x.id!==id;}); persist(); render();
+  }
 
   // ---- editors ----
   var modal=document.getElementById("modal"), sheet=document.getElementById("sheet");
