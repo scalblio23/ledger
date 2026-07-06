@@ -130,6 +130,7 @@
   .row .amt .c{color:var(--faint);font-weight:400}
   .rowdel{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:#fff;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1}
   body.editing .rowdel{display:flex}
+  .row:hover .rowdel{display:flex}
   .empty{padding:34px 0;text-align:center;color:var(--faint);font-size:13px}
 
   /* page nav */
@@ -631,7 +632,7 @@
     var log=document.getElementById("log");
     log.innerHTML="";
     if(!state.entries.length){
-      log.innerHTML='<div class="empty">No entries yet. Turn on Edit and add an in or out entry.</div>';
+      log.innerHTML='<div class="empty">No transactions yet — press C or tap + Add above.</div>';
     } else {
       state.entries.forEach(function(e){
         var m=money(e.amount);
@@ -757,22 +758,21 @@
     var seg=sheet.querySelector("#f_seg");
     seg.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b)return; type=b.getAttribute("data-t"); Array.prototype.forEach.call(seg.children,function(c){c.classList.remove("active");}); b.classList.add("active"); });
     sheet.querySelector("#f_cancel").addEventListener("click",closeModal);
-    sheet.querySelector("#f_save").addEventListener("click",function(){
+    function saveEntry(){
       var amt=Math.abs(parseFloat(sheet.querySelector("#f_amt").value)||0);
       if(!amt) return;
       var date=sheet.querySelector("#f_date").value||todayISO();
       var title=sheet.querySelector("#f_title").value.trim()||"Untitled";
       var acct=sel.value||"";
       state.entries.unshift({id:uid(),type:type,title:title,account:acct,date:date,amount:amt});
-      // update account balance if one is selected
       if(acct){
         var account=state.accounts.find(function(a){return a.name===acct;});
-        if(account){
-          account.balance=(+account.balance||0)+(type==="in"?amt:-amt);
-        }
+        if(account) account.balance=(+account.balance||0)+(type==="in"?amt:-amt);
       }
       persist(); render(); closeModal();
-    });
+    }
+    sheet.querySelector("#f_save").addEventListener("click",saveEntry);
+    sheet.addEventListener("keydown",function(e){ if(e.key==="Enter"&&document.activeElement.tagName!=="BUTTON") saveEntry(); });
     modal.classList.add("open");
     setTimeout(function(){ var n=sheet.querySelector("#f_amt"); if(n) n.focus(); },50);
   }
