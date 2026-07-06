@@ -914,109 +914,113 @@
     var wrap=document.getElementById("cfChart"); if(!wrap) return;
     var days=allDaysInMonth(selMonth);
     var today=todayISO();
-    var curMonth=today.slice(0,7);
-    var isCurMonth=(selMonth===curMonth);
+    var isCurMonth=(selMonth===today.slice(0,7));
 
-    // base balance = current total accounts
     var base=state.accounts.reduce(function(s,a){return s+(+a.balance||0);},0);
 
-    // build day -> net cashflow map for this month
     var cfMap={};
     (state.cashflow||[]).filter(function(e){return ym(e.date)===selMonth;})
       .forEach(function(e){ cfMap[e.date]=(cfMap[e.date]||0)+(+e.amount||0); });
 
-    // compute running balance for each day
-    // for current month: base is account total at today; project backward before today and forward after
-    // for other months: base offset = 0 (relative projection from account total)
     var points=[];
     var running=base;
-
     if(isCurMonth){
-      // walk forward from start of month using cashflow entries
-      // first compute balance at start of month (base minus cashflow from month-start to today)
       var startBal=base;
       days.forEach(function(d){ if(d<=today) startBal-=(cfMap[d]||0); });
       running=startBal;
     }
+    days.forEach(function(d){ running+=(cfMap[d]||0); points.push({date:d,bal:running}); });
 
-    days.forEach(function(d){
-      running+=(cfMap[d]||0);
-      points.push({date:d,bal:running});
-    });
-
-    // compute y range with padding
     var bals=points.map(function(p){return p.bal;});
     var minB=Math.min.apply(null,bals), maxB=Math.max.apply(null,bals);
-    var range=Math.max(Math.abs(maxB-minB),1);
-    var pad=range*0.18;
+    var range=Math.max(Math.abs(maxB-minB),1), pad=range*0.18;
     var lo=minB-pad, hi=maxB+pad;
     var H=90, W=600;
 
-    function px(i){ return Math.round((i/(points.length-1||1))*W); }
-    function py(v){ return Math.round(H-((v-lo)/(hi-lo))*H); }
+    function px(i){ return (i/(points.length-1||1))*W; }
+    function py(v){ return H-((v-lo)/(hi-lo))*H; }
 
-    // build smooth SVG path (cubic bezier through points)
     var pts=points.map(function(p,i){return [px(i),py(p.bal)];});
-    var d="M"+pts[0][0]+","+pts[0][1];
+    var pathD="M"+pts[0][0].toFixed(1)+","+pts[0][1].toFixed(1);
     for(var i=1;i<pts.length;i++){
-      var cp1x=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*0.45;
-      var cp1y=pts[i-1][1];
-      var cp2x=pts[i][0]-(pts[i][0]-pts[i-1][0])*0.45;
-      var cp2y=pts[i][1];
-      d+=" C"+cp1x+","+cp1y+" "+cp2x+","+cp2y+" "+pts[i][0]+","+pts[i][1];
+      var cp1x=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*0.45, cp1y=pts[i-1][1];
+      var cp2x=pts[i][0]-(pts[i][0]-pts[i-1][0])*0.45, cp2y=pts[i][1];
+      pathD+=" C"+cp1x.toFixed(1)+","+cp1y.toFixed(1)+" "+cp2x.toFixed(1)+","+cp2y.toFixed(1)+" "+pts[i][0].toFixed(1)+","+pts[i][1].toFixed(1);
     }
+    var fillD=pathD+" L"+pts[pts.length-1][0].toFixed(1)+","+(H+2)+" L"+pts[0][0].toFixed(1)+","+(H+2)+" Z";
 
-    // fill path (close down to bottom)
-    var fillD=d+" L"+pts[pts.length-1][0]+","+(H+2)+" L"+pts[0][0]+","+(H+2)+" Z";
-
-    // today marker
-    var todayMarker="";
-    if(isCurMonth){
-      var ti=days.indexOf(today);
-      if(ti>=0){
-        var tx=px(ti), ty=py(points[ti].bal);
-        todayMarker=
-          '<line x1="'+tx+'" y1="0" x2="'+tx+'" y2="'+H+'" stroke="rgba(245,158,11,.3)" stroke-width="1" stroke-dasharray="3,3"/>'+
-          '<circle cx="'+tx+'" cy="'+ty+'" r="3.5" fill="#f59e0b" opacity=".9"/>'+
-          '<circle cx="'+tx+'" cy="'+ty+'" r="6" fill="rgba(245,158,11,.15)"/>';
-      }
-    }
-
-    // end balance
     var endBal=points[points.length-1].bal;
-    var em=money(Math.abs(endBal));
-    var isUp=endBal>=base-(isCurMonth?0:0);
     var lineColor=endBal>=base?"#4ADE80":"#F87171";
+
+    // today static marker
+    var todayMarker="";
+    if(isCurMonth){ var ti=days.indexOf(today); if(ti>=0){ var tx=px(ti),ty=py(points[ti].bal); todayMarker='<line x1="'+tx.toFixed(1)+'" y1="0" x2="'+tx.toFixed(1)+'" y2="'+H+'" stroke="rgba(245,158,11,.25)" stroke-width="1" stroke-dasharray="3,3"/><circle cx="'+tx.toFixed(1)+'" cy="'+ty.toFixed(1)+'" r="3.5" fill="#f59e0b" opacity=".85"/>'; } }
+
+    function fmtBal(v){ var m=money(Math.abs(v)); return (v<0?"−":"")+"$"+m.d+"."+m.c; }
 
     wrap.innerHTML=
       '<div class="cf-chart">'+
         '<div class="cf-chart-meta">'+
           '<div>'+
-            '<div class="cf-chart-label">Balance projection · '+monthLabel(selMonth)+'</div>'+
-            '<div class="cf-chart-bal">'+(endBal<0?"−":"")+'$'+em.d+'<span>.'+em.c+'</span> <span style="font-size:12px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span></div>'+
+            '<div class="cf-chart-label" id="cfHoverDate">Balance projection · '+monthLabel(selMonth)+'</div>'+
+            '<div class="cf-chart-bal" id="cfHoverBal">'+fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span></div>'+
           '</div>'+
           '<div style="text-align:right">'+
             '<div class="cf-chart-label">Start</div>'+
-            '<div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px">'+(function(){var sm=money(Math.abs(points[0].bal));return (points[0].bal<0?"−":"")+"$"+sm.d+"."+sm.c;})()+'</div>'+
+            '<div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px">'+fmtBal(points[0].bal)+'</div>'+
           '</div>'+
         '</div>'+
-        '<svg class="cf-chart-svg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" height="90">'+
-          '<defs>'+
-            '<linearGradient id="cfFill" x1="0" y1="0" x2="0" y2="1">'+
-              '<stop offset="0%" stop-color="'+lineColor+'" stop-opacity="0.18"/>'+
-              '<stop offset="100%" stop-color="'+lineColor+'" stop-opacity="0.01"/>'+
-            '</linearGradient>'+
-          '</defs>'+
-          '<path d="'+fillD+'" fill="url(#cfFill)"/>'+
-          '<path d="'+d+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
-          todayMarker+
-        '</svg>'+
+        '<div style="position:relative">'+
+          '<svg class="cf-chart-svg" id="cfSvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" height="90" style="cursor:crosshair">'+
+            '<defs>'+
+              '<linearGradient id="cfFill" x1="0" y1="0" x2="0" y2="1">'+
+                '<stop offset="0%" stop-color="'+lineColor+'" stop-opacity="0.18"/>'+
+                '<stop offset="100%" stop-color="'+lineColor+'" stop-opacity="0.01"/>'+
+              '</linearGradient>'+
+            '</defs>'+
+            '<path d="'+fillD+'" fill="url(#cfFill)"/>'+
+            '<path d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+            todayMarker+
+            '<line id="cfCross" x1="-1" y1="0" x2="-1" y2="'+H+'" stroke="rgba(255,255,255,.25)" stroke-width="1"/>'+
+            '<circle id="cfDot" cx="-10" cy="-10" r="4" fill="#fff" stroke="'+lineColor+'" stroke-width="1.5"/>'+
+          '</svg>'+
+        '</div>'+
         '<div class="cf-chart-dates">'+
           '<span>'+fmtDate(days[0])+'</span>'+
           (isCurMonth&&days.indexOf(today)>0&&days.indexOf(today)<days.length-1?'<span style="color:rgba(245,158,11,.7)">Today</span>':'')+
           '<span>'+fmtDate(days[days.length-1])+'</span>'+
         '</div>'+
       '</div>';
+
+    // hover interaction
+    var svg=document.getElementById("cfSvg");
+    var cross=document.getElementById("cfCross");
+    var dot=document.getElementById("cfDot");
+    var hoverBal=document.getElementById("cfHoverBal");
+    var hoverDate=document.getElementById("cfHoverDate");
+    var defaultLabel="Balance projection · "+monthLabel(selMonth);
+    var defaultBal=fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span>';
+
+    if(!svg) return;
+    svg.addEventListener("mousemove",function(e){
+      var rect=svg.getBoundingClientRect();
+      var ratio=(e.clientX-rect.left)/rect.width;
+      ratio=Math.max(0,Math.min(1,ratio));
+      var idx=Math.round(ratio*(points.length-1));
+      var p=points[idx];
+      var svgX=px(idx);
+      var svgY=py(p.bal);
+      cross.setAttribute("x1",svgX); cross.setAttribute("x2",svgX);
+      dot.setAttribute("cx",svgX); dot.setAttribute("cy",svgY);
+      hoverDate.textContent=fmtDate(p.date);
+      hoverBal.innerHTML=fmtBal(p.bal);
+    });
+    svg.addEventListener("mouseleave",function(){
+      cross.setAttribute("x1",-1); cross.setAttribute("x2",-1);
+      dot.setAttribute("cx",-10); dot.setAttribute("cy",-10);
+      hoverDate.textContent=defaultLabel;
+      hoverBal.innerHTML=defaultBal;
+    });
   }
 
   function renderCashflow(){
