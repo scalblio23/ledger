@@ -128,6 +128,7 @@
   .row .amt{font-size:15px;font-weight:500;letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap}
   .row .amt.pos{color:var(--pos)}
   .row .amt .c{color:var(--faint);font-weight:400}
+  .row .bal-after{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap;margin-top:4px;text-align:right}
   .rowdel{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--stroke);background:rgba(0,0,0,.4);color:#fff;display:none;align-items:center;justify-content:center;cursor:pointer;font-size:14px;line-height:1}
   body.editing .rowdel{display:flex}
   .row:hover .rowdel{display:flex}
@@ -635,15 +636,38 @@
     if(!state.entries.length){
       log.innerHTML='<div class="empty">No transactions yet — press C or tap + Add above.</div>';
     } else {
-      state.entries.forEach(function(e){
+      // build running balance map per account (entries stored newest-first)
+      // start from current balance and walk forward through entries to find balance-after each
+      var acctBal={};
+      state.accounts.forEach(function(a){ acctBal[a.name]=+a.balance||0; });
+      // compute balance AFTER each entry by working backwards through the list
+      // entries[0] is newest; current balance = after entries[0]
+      // entries[i] balance-after = current_bal - sum(effect of entries[0..i-1])
+      var runBal={};
+      state.accounts.forEach(function(a){ runBal[a.name]=+a.balance||0; });
+      var balAfter=state.entries.map(function(e){
+        if(!e.account) return null;
+        var bal=runBal[e.account];
+        if(bal===undefined) return null;
+        var after=bal;
+        runBal[e.account]=bal-(e.type==="in"?(+e.amount||0):-(+e.amount||0));
+        return after;
+      });
+
+      state.entries.forEach(function(e,i){
         var m=money(e.amount);
+        var after=balAfter[i];
+        var mb=after!==null&&after!==undefined?money(Math.abs(after)):null;
         var row=document.createElement("div");
         row.className="row "+(e.type==="in"?"in":"out");
         row.innerHTML=
           '<div class="ic">'+(e.type==="in"?IN_SVG:OUT_SVG)+'</div>'+
           '<div class="desc"><div class="t">'+esc(e.title)+'</div>'+
             '<div class="s">'+esc(e.account||"")+' <span class="cat">'+(e.type==="in"?"· Income":"· Expense")+'</span> · '+esc(e.date||"")+'</div></div>'+
-          '<div class="amt'+(e.type==="in"?" pos":"")+'">'+(e.type==="in"?"+":"−")+'$'+m.d+'<span class="c">.'+m.c+'</span></div>'+
+          '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'+
+            '<div class="amt'+(e.type==="in"?" pos":"")+'">'+(e.type==="in"?"+":"−")+'$'+m.d+'<span class="c">.'+m.c+'</span></div>'+
+            (mb?'<div class="bal-after">'+(after<0?"−":"")+'$'+mb.d+'.'+mb.c+'</div>':'')+
+          '</div>'+
           '<button class="rowdel" data-del-entry="'+e.id+'">&times;</button>';
         row.querySelector("[data-del-entry]").addEventListener("click",function(){ removeEntry(e.id); });
         log.appendChild(row);
