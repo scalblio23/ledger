@@ -764,6 +764,13 @@
       var title=sheet.querySelector("#f_title").value.trim()||"Untitled";
       var acct=sel.value||"";
       state.entries.unshift({id:uid(),type:type,title:title,account:acct,date:date,amount:amt});
+      // update account balance if one is selected
+      if(acct){
+        var account=state.accounts.find(function(a){return a.name===acct;});
+        if(account){
+          account.balance=(+account.balance||0)+(type==="in"?amt:-amt);
+        }
+      }
       persist(); render(); closeModal();
     });
     modal.classList.add("open");
