@@ -385,6 +385,7 @@
       <h2>Activity</h2>
       <div class="right">
         <button class="addbtn" id="addEntry">+ Add entry</button>
+        <button class="cfbtn" id="addEntryBtn">+ Add</button>
         <a id="viewAll">View all</a>
       </div>
     </div>
@@ -741,15 +742,15 @@
   function openEntry(){
     var type="out";
     sheet.innerHTML=
-      '<h3>Add entry</h3>'+
+      '<h3>Add transaction</h3>'+
       '<div class="seg" id="f_seg"><button data-t="in">In</button><button data-t="out" class="active">Out</button></div>'+
-      '<div class="field"><label>Description</label><input id="f_title" placeholder="e.g. Client payment"></div>'+
       '<div class="field two"><div><label>Amount (AUD)</label><input id="f_amt" type="number" step="0.01" placeholder="0.00"></div>'+
-        '<div><label>Account</label><select id="f_acct"></select></div></div>'+
-      '<div class="field"><label>Date</label><input id="f_date" placeholder="Today"></div>'+
+        '<div><label>Date</label><input id="f_date" type="date" value="'+todayISO()+'"></div></div>'+
+      '<div class="field"><label>Item</label><input id="f_title" placeholder="e.g. Client payment"></div>'+
+      '<div class="field"><label>Account</label><select id="f_acct"></select></div>'+
       '<div class="actions">'+
         '<button class="btn btn-ghost" id="f_cancel">Cancel</button>'+
-        '<button class="btn btn-primary" id="f_save">Add entry</button>'+
+        '<button class="btn btn-primary" id="f_save">Add</button>'+
       '</div>';
     var sel=sheet.querySelector("#f_acct");
     state.accounts.forEach(function(a){ var o=document.createElement("option"); o.value=a.name; o.textContent=a.name; sel.appendChild(o); });
@@ -757,15 +758,16 @@
     seg.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b)return; type=b.getAttribute("data-t"); Array.prototype.forEach.call(seg.children,function(c){c.classList.remove("active");}); b.classList.add("active"); });
     sheet.querySelector("#f_cancel").addEventListener("click",closeModal);
     sheet.querySelector("#f_save").addEventListener("click",function(){
-      var title=sheet.querySelector("#f_title").value.trim()||"Untitled";
       var amt=Math.abs(parseFloat(sheet.querySelector("#f_amt").value)||0);
+      if(!amt) return;
+      var date=sheet.querySelector("#f_date").value||todayISO();
+      var title=sheet.querySelector("#f_title").value.trim()||"Untitled";
       var acct=sel.value||"";
-      var date=sheet.querySelector("#f_date").value.trim()||"Today";
       state.entries.unshift({id:uid(),type:type,title:title,account:acct,date:date,amount:amt});
       persist(); render(); closeModal();
     });
     modal.classList.add("open");
-    setTimeout(function(){ var n=sheet.querySelector("#f_title"); if(n) n.focus(); },50);
+    setTimeout(function(){ var n=sheet.querySelector("#f_amt"); if(n) n.focus(); },50);
   }
 
   // ---- cashflow projection ----
@@ -1070,6 +1072,7 @@
   });
   document.getElementById("addAccount").addEventListener("click",function(){ openAccount(null); });
   document.getElementById("addEntry").addEventListener("click",openEntry);
+  document.getElementById("addEntryBtn").addEventListener("click",openEntry);
 
   // ---- auth UI ----
   var authMode="login";
