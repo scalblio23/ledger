@@ -225,6 +225,14 @@
   .cf-chart-svg{display:block;width:100%;position:relative;z-index:1}
   .cf-chart-dates{display:flex;justify-content:space-between;margin-top:6px;position:relative;z-index:1}
   .cf-chart-dates span{font-size:11px;color:var(--faint)}
+  .cf-tooltip{position:absolute;pointer-events:none;background:rgba(15,15,20,.88);border:1px solid rgba(255,255,255,.13);border-radius:10px;padding:7px 10px;font-size:12px;white-space:nowrap;transform:translateX(-50%);bottom:calc(100% + 8px);opacity:0;transition:opacity .12s;z-index:10;min-width:120px}
+  .cf-tooltip.show{opacity:1}
+  .cf-tooltip-item{display:flex;justify-content:space-between;gap:16px;line-height:1.7}
+  .cf-tooltip-name{color:rgba(255,255,255,.7);max-width:160px;overflow:hidden;text-overflow:ellipsis}
+  .cf-tooltip-amt{font-variant-numeric:tabular-nums;font-weight:500}
+  .cf-tooltip-amt.pos{color:#4ADE80}
+  .cf-tooltip-amt.neg{color:#F87171}
+  .cf-tooltip-none{color:var(--faint);font-size:11px;text-align:center}
 
   /* ---- wage tracker ---- */
   .wg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:4px}
@@ -1011,9 +1019,13 @@
 
     var base=state.accounts.reduce(function(s,a){return s+(+a.balance||0);},0);
 
-    var cfMap={};
+    var cfMap={}, cfItems={};
     (state.cashflow||[]).filter(function(e){return ym(e.date)===selMonth;})
-      .forEach(function(e){ cfMap[e.date]=(cfMap[e.date]||0)+(+e.amount||0); });
+      .forEach(function(e){
+        cfMap[e.date]=(cfMap[e.date]||0)+(+e.amount||0);
+        if(!cfItems[e.date]) cfItems[e.date]=[];
+        cfItems[e.date].push(e);
+      });
 
     var points=[];
     var running=base;
@@ -1064,6 +1076,7 @@
           '</div>'+
         '</div>'+
         '<div style="position:relative">'+
+          '<div class="cf-tooltip" id="cfTooltip"></div>'+
           '<svg class="cf-chart-svg" id="cfSvg" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" height="90" style="cursor:crosshair">'+
             '<defs>'+
               '<linearGradient id="cfFill" x1="0" y1="0" x2="0" y2="1">'+
@@ -1094,6 +1107,7 @@
     var defaultLabel="Balance projection · "+monthLabel(selMonth);
     var defaultBal=fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span>';
 
+    var tooltip=document.getElementById("cfTooltip");
     if(!svg) return;
     svg.addEventListener("mousemove",function(e){
       var rect=svg.getBoundingClientRect();
@@ -1107,12 +1121,30 @@
       dot.setAttribute("cx",svgX); dot.setAttribute("cy",svgY);
       hoverDate.textContent=fmtDate(p.date);
       hoverBal.innerHTML=fmtBal(p.bal);
+      // tooltip
+      var items=cfItems[p.date]||[];
+      var pct=(svgX/W*100).toFixed(2)+"%";
+      tooltip.style.left=pct;
+      if(items.length){
+        tooltip.innerHTML=items.map(function(it){
+          var a=+it.amount||0;
+          return '<div class="cf-tooltip-item">'+
+            '<span class="cf-tooltip-name">'+esc(it.name||"")+'</span>'+
+            '<span class="cf-tooltip-amt '+(a>=0?"pos":"neg")+'">'+(a>=0?"+":"−")+'$'+money(Math.abs(a)).d+'.'+money(Math.abs(a)).c+'</span>'+
+          '</div>';
+        }).join("");
+        tooltip.classList.add("show");
+      } else {
+        tooltip.innerHTML='<div class="cf-tooltip-none">No entries</div>';
+        tooltip.classList.add("show");
+      }
     });
     svg.addEventListener("mouseleave",function(){
       cross.setAttribute("x1",-1); cross.setAttribute("x2",-1);
       dot.setAttribute("cx",-10); dot.setAttribute("cy",-10);
       hoverDate.textContent=defaultLabel;
       hoverBal.innerHTML=defaultBal;
+      tooltip.classList.remove("show");
     });
   }
 
