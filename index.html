@@ -968,7 +968,6 @@
       persist(); render(); closeModal();
     }
     sheet.querySelector("#f_save").addEventListener("click",saveEntry);
-    sheet.addEventListener("keydown",function(e){ if(e.key==="Enter"&&document.activeElement.tagName!=="BUTTON") saveEntry(); });
     modal.classList.add("open");
     setTimeout(function(){ amtInput.focus(); },50);
   }
