@@ -216,6 +216,8 @@
   .pay-cf-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:#a78bfa;margin-right:5px;vertical-align:middle;position:relative;top:-1px}
   /* payment log */
   /* ---- cashflow chart ---- */
+  @keyframes cfPulse{0%,100%{filter:drop-shadow(0 0 3px currentColor) drop-shadow(0 0 0px currentColor)}50%{filter:drop-shadow(0 0 8px currentColor) drop-shadow(0 0 18px currentColor)}}
+  .cf-line-pulse{animation:cfPulse 3s ease-in-out infinite}
   .cf-chart{position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(155deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 16px 44px rgba(0,0,0,.55);backdrop-filter:blur(60px) saturate(220%) brightness(0.82);-webkit-backdrop-filter:blur(60px) saturate(220%) brightness(0.82);padding:20px 20px 12px}
   .cf-chart::after{content:"";position:absolute;top:0;left:0;right:0;height:50%;background:linear-gradient(180deg,rgba(255,255,255,.1),transparent);pointer-events:none;border-radius:20px 20px 0 0}
   .cf-chart-meta{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;position:relative;z-index:1}
@@ -1070,9 +1072,9 @@
             '<div class="cf-chart-label" id="cfHoverDate">Balance projection · '+monthLabel(selMonth)+'</div>'+
             '<div class="cf-chart-bal" id="cfHoverBal">'+fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span></div>'+
           '</div>'+
-          '<div style="text-align:right">'+
-            '<div class="cf-chart-label">Start</div>'+
-            '<div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px">'+fmtBal(points[0].bal)+'</div>'+
+          '<div style="display:flex;gap:24px;text-align:right">'+
+            (isCurMonth?'<div><div class="cf-chart-label">Current</div><div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px;color:'+lineColor+'">'+fmtBal(points[days.indexOf(today)>=0?days.indexOf(today):0].bal)+'</div></div>':'')+
+            '<div><div class="cf-chart-label">Start</div><div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px">'+fmtBal(points[0].bal)+'</div></div>'+
           '</div>'+
         '</div>'+
         '<div style="position:relative">'+
@@ -1085,7 +1087,7 @@
               '</linearGradient>'+
             '</defs>'+
             '<path d="'+fillD+'" fill="url(#cfFill)"/>'+
-            '<path d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'+
+            '<path class="cf-line-pulse" d="'+pathD+'" fill="none" stroke="'+lineColor+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" color="'+lineColor+'"/>'+
             todayMarker+
             '<line id="cfCross" x1="-1" y1="0" x2="-1" y2="'+H+'" stroke="rgba(255,255,255,.25)" stroke-width="1"/>'+
             '<circle id="cfDot" cx="-10" cy="-10" r="4" fill="#fff" stroke="'+lineColor+'" stroke-width="1.5"/>'+
