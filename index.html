@@ -254,6 +254,11 @@
   .wg-send-pill{flex:none;align-self:flex-start;padding:7px 12px;border-radius:100px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.22);color:rgba(251,191,36,.75);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;transition:color .18s,border-color .18s,background .18s;margin-top:14px}
   .wg-send-pill:hover{color:#fbbf24;border-color:rgba(251,191,36,.5);background:rgba(251,191,36,.14)}
   .wg-send-pill.sent{background:rgba(74,222,128,.10);border-color:rgba(74,222,128,.25);color:rgba(74,222,128,.8);cursor:default}
+  .wg-paid-pill{flex:none;align-self:flex-start;padding:7px 12px;border-radius:100px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.22);color:rgba(99,102,241,.75);font-family:var(--font);font-size:11px;font-weight:500;cursor:pointer;letter-spacing:.04em;transition:color .18s,border-color .18s,background .18s;margin-top:6px}
+  .wg-paid-pill:hover{color:#818cf8;border-color:rgba(99,102,241,.5);background:rgba(99,102,241,.14)}
+  .wg-card.paid{opacity:.38;filter:grayscale(.6)}
+  .wg-card.paid .wg-name{text-decoration:line-through;color:var(--faint)}
+  .wg-card.paid .wg-total{color:var(--faint)}
   .wg-empty{padding:48px 0;text-align:center;color:var(--faint);font-size:13px}
   .wg-bill-wrap{margin-top:32px}
   .wg-bill-table{width:100%;border-collapse:collapse}
@@ -1440,10 +1445,14 @@
         '<div class="wg-total"><span class="pc">$</span>'+m.d+'<span class="pcc">.'+m.c+'</span></div>'+
         '<button class="wg-send-pill'+(w.sent?" sent":"")+'">'+
           (w.sent?'✓ In Cashflow':'→ Send to Cashflow')+
-        '</button>';
+        '</button>'+
+        (w.sent?'<button class="wg-paid-pill">'+(w.paid?'✓ Paid':'Mark as Paid')+'</button>':'');
+      card.className="wg-card"+(w.paid?" paid":"");
       card.querySelector(".wg-del").addEventListener("click",function(e){ e.stopPropagation(); removeWage(w.id); });
       card.querySelector(".wg-send-pill").addEventListener("click",function(e){ e.stopPropagation(); if(!w.sent) sendWageToCashflow(w.id); });
-      card.addEventListener("click",function(e){ if(!e.target.closest(".wg-del")&&!e.target.closest(".wg-send-pill")) openWage(w.id); });
+      var paidBtn=card.querySelector(".wg-paid-pill");
+      if(paidBtn) paidBtn.addEventListener("click",function(e){ e.stopPropagation(); toggleWagePaid(w.id); });
+      card.addEventListener("click",function(e){ if(!e.target.closest(".wg-del")&&!e.target.closest(".wg-send-pill")&&!e.target.closest(".wg-paid-pill")) openWage(w.id); });
       grid.appendChild(card);
     });
     // bill table
@@ -1456,7 +1465,7 @@
       var m=money(tot);
       var tr=document.createElement("tr");
       tr.innerHTML=
-        '<td>'+esc(w.name)+(w.sent?'<span class="wg-sent-tag">Cashflow</span>':'')+'</td>'+
+        '<td>'+esc(w.name)+(w.sent?'<span class="wg-sent-tag">Cashflow</span>':'')+(w.paid?'<span class="wg-sent-tag" style="color:rgba(99,102,241,.8);background:rgba(99,102,241,.10);border-color:rgba(99,102,241,.2)">Paid</span>':'')+'</td>'+
         '<td style="color:var(--muted);font-size:13px">'+esc(w.dateFrom)+' – '+esc(w.dateTo)+'</td>'+
         '<td class="ta">'+esc(String(w.hours))+'h</td>'+
         '<td class="ta" style="color:var(--muted)">$'+esc(String(w.rate))+'/hr</td>'+
@@ -1478,6 +1487,11 @@
   function removeWage(id){
     state.wages=state.wages.filter(function(w){return w.id!==id;});
     persist(); renderWages();
+  }
+
+  function toggleWagePaid(id){
+    var w=state.wages.find(function(x){return x.id===id;});
+    if(w){ w.paid=!w.paid; persist(); renderWages(); }
   }
 
   function sendWageToCashflow(id){
