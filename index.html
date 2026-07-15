@@ -385,6 +385,7 @@
       <button class="navbtn" data-page="cashflow">Cashflow</button>
       <button class="navbtn" data-page="payments">Payments</button>
       <button class="navbtn" data-page="wages">Wages</button>
+      <button class="navbtn" data-page="breakdown">Breakdown</button>
     </div>
 
     <div id="page-overview" class="page active">
@@ -517,6 +518,10 @@
         </div>
       </div>
     </div><!-- /page-wages -->
+
+    <div id="page-breakdown" class="page">
+      <div id="breakdownContent"></div>
+    </div><!-- /page-breakdown -->
   </div>
 
   <!-- editor modal -->
@@ -1563,6 +1568,88 @@
     setTimeout(function(){ sheet.querySelector("#wg_name").focus(); },50);
   }
 
+  // ---- breakdown ----
+  function renderBreakdown(){
+    var CATS = [
+      { name:"Food & Dining", color:"#F59E0B", keys:["cafe","coffee","kfc","mcdonald","uber eat","pizza","espresso","bolla","messina","guzman","restaurant","bakery","sushi","noodle","burger","taco","kebab","hungry jack","oporto","grill","bistro","eatery","food","dining","ls kent","donut","muffin","subway","salad","thai","chinese","indian","japanese","nando","domino","red rooster"] },
+      { name:"Transport", color:"#60A5FA", keys:["uber","ola ride","didi","taxi","otr","bp fuel","shell","fuel","petrol","adelaidemetro","metro card","adelaidemetro","evie","karmo","car wash","parking","toll","airfare","flight","qantas","jetstar","virgin australia","emirates","lyft"] },
+      { name:"Software & SaaS", color:"#A78BFA", keys:["anthropic","openai","highlevel","atlassian","railway","elevenlabs","reclaim","superwhisper","make.com","waves","higgsfield","onlinejobsph","reachinbox","captions","twilio","whop","github","notion","figma","adobe","canva","slack","zoom","dropbox","shopify","stripe","netlify","heroku","aws","google cloud","azure","digitalocean","vercel","cloudflare","namecheap","godaddy","google workspace","gsuite"] },
+      { name:"Advertising", color:"#F472B6", keys:["facebook","meta","facebk","google ads","tiktok ads","twitter ads","linkedin ads","snapchat ads","youtube ads","taboola","outbrain","pinterest ads"] },
+      { name:"Shopping", color:"#34D399", keys:["apple","uniqlo","officeworks","centre com","amazon","ebay","kmart","target","big w","myer","david jones","cotton on","h&m","zara","asos","the iconic","jb hi","harvey norman","good guys","bunnings","ikea","anaconda","rebel sport","footlocker","paypal"] },
+      { name:"Staff & Contractors", color:"#FB923C", keys:["ebony","cody drury","arly dale","porazo","contractor","freelance","upwork","fiverr"] },
+      { name:"Health", color:"#2DD4BF", keys:["pharmacy","chemist","priceline","gym","fitness","health","medical","doctor","dental","hospital","clinic","medicare","optometrist","physio"] },
+      { name:"Subscriptions", color:"#818CF8", keys:["netflix","spotify","disney","apple tv","hulu","amazon prime","youtube premium","paramount","binge","stan","kayo","foxtel","audible"] }
+    ];
+
+    function categorise(title){
+      var t = (title||"").toLowerCase();
+      for(var i=0;i<CATS.length;i++){
+        for(var j=0;j<CATS[i].keys.length;j++){
+          if(t.indexOf(CATS[i].keys[j])!==-1) return CATS[i].name;
+        }
+      }
+      return "Other";
+    }
+
+    var totals = {};
+    CATS.forEach(function(c){ totals[c.name]=0; });
+    totals["Other"]=0;
+
+    state.entries.forEach(function(e){
+      if(e.type!=="out") return;
+      var cat = categorise(e.title);
+      totals[cat] = (totals[cat]||0) + (e.amount||0);
+    });
+
+    var catColors = {};
+    CATS.forEach(function(c){ catColors[c.name]=c.color; });
+    catColors["Other"]="#9CA3AF";
+
+    var totalSpend = Object.values(totals).reduce(function(a,b){return a+b;},0);
+
+    var sorted = Object.keys(totals).filter(function(k){return totals[k]>0;}).sort(function(a,b){return totals[b]-totals[a];});
+
+    var html = '<div style="padding:4px 0 16px">'
+      +'<div style="font-size:13px;color:var(--faint);margin-bottom:18px">Total spend categorised across all accounts · AUD</div>';
+
+    // summary cards row
+    html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
+      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Total Out</div>'
+      +'<div style="font-size:22px;font-weight:700;margin-top:4px;color:#F87171">'+fmtBal(totalSpend)+'</div></div>';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
+      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Categories</div>'
+      +'<div style="font-size:22px;font-weight:700;margin-top:4px">'+sorted.length+'</div></div>';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
+      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Transactions</div>'
+      +'<div style="font-size:22px;font-weight:700;margin-top:4px">'+state.entries.filter(function(e){return e.type==="out";}).length+'</div></div>';
+    html += '</div>';
+
+    // category bars
+    sorted.forEach(function(cat){
+      var amt = totals[cat];
+      var pct = totalSpend > 0 ? (amt/totalSpend*100) : 0;
+      var col = catColors[cat]||"#9CA3AF";
+      html += '<div style="background:var(--card);border-radius:14px;padding:16px 18px;margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+        +'<div style="display:flex;align-items:center;gap:10px">'
+        +'<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
+        +'<span style="font-weight:600;font-size:14px">'+cat+'</span>'
+        +'</div>'
+        +'<div style="display:flex;align-items:center;gap:14px">'
+        +'<span style="font-size:12px;color:var(--faint)">'+pct.toFixed(1)+'%</span>'
+        +'<span style="font-weight:700;font-size:15px;color:#F87171;font-variant-numeric:tabular-nums">'+fmtBal(amt)+'</span>'
+        +'</div></div>'
+        +'<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden">'
+        +'<div style="height:100%;border-radius:999px;background:'+col+';width:'+pct.toFixed(2)+'%;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>'
+        +'</div></div>';
+    });
+
+    html += '</div>';
+
+    document.getElementById("breakdownContent").innerHTML = html;
+  }
+
   // ---- page nav ----
   Array.prototype.forEach.call(document.querySelectorAll(".navbtn"),function(b){
     b.addEventListener("click",function(){
@@ -1572,10 +1659,12 @@
       document.getElementById("page-cashflow").classList.toggle("active",page==="cashflow");
       document.getElementById("page-payments").classList.toggle("active",page==="payments");
       document.getElementById("page-wages").classList.toggle("active",page==="wages");
+      document.getElementById("page-breakdown").classList.toggle("active",page==="breakdown");
       document.getElementById("editToggle").style.display = page==="overview" ? "" : "none";
       if(page==="cashflow") renderCashflow();
       if(page==="payments") renderPayments();
       if(page==="wages") renderWages();
+      if(page==="breakdown") renderBreakdown();
     });
   });
 
