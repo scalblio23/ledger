@@ -455,6 +455,10 @@
         <a id="viewAll">View all</a>
       </div>
     </div>
+    <div class="fade" style="animation-delay:.50s;margin-bottom:10px;position:relative">
+      <input id="entrySearch" type="text" placeholder="Search transactions…" style="width:100%;box-sizing:border-box;padding:10px 16px 10px 36px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .2s" />
+      <svg style="position:absolute;left:12px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--faint);pointer-events:none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    </div>
     <div class="logwrap fade" id="log" style="animation-delay:.52s"></div>
     </div><!-- /page-overview -->
 
@@ -721,17 +725,21 @@
 
     // activity log
     var log=document.getElementById("log");
+    var searchEl=document.getElementById("entrySearch");
+    var searchQ=(searchEl?searchEl.value.trim().toLowerCase():"");
     log.innerHTML="";
     if(!state.entries.length){
       log.innerHTML='<div class="empty">No transactions yet — press C or tap + Add above.</div>';
     } else {
-      // build running balance map per account (entries stored newest-first)
-      // start from current balance and walk forward through entries to find balance-after each
-      var acctBal={};
-      state.accounts.forEach(function(a){ acctBal[a.name]=+a.balance||0; });
-      // compute balance AFTER each entry by working backwards through the list
-      // entries[0] is newest; current balance = after entries[0]
-      // entries[i] balance-after = current_bal - sum(effect of entries[0..i-1])
+      var filtered=state.entries.filter(function(e){
+        if(!searchQ) return true;
+        return (e.title||"").toLowerCase().indexOf(searchQ)>=0||
+               (e.account||"").toLowerCase().indexOf(searchQ)>=0||
+               (e.date||"").indexOf(searchQ)>=0;
+      });
+      if(!filtered.length){
+        log.innerHTML='<div class="empty">No transactions match "'+esc(searchQ)+'"</div>';
+      } else {
       var runBal={};
       state.accounts.forEach(function(a){ runBal[a.name]=+a.balance||0; });
       var balAfter=state.entries.map(function(e){
@@ -742,8 +750,9 @@
         runBal[e.account]=bal-(e.type==="in"?(+e.amount||0):-(+e.amount||0));
         return after;
       });
-
+      var filteredSet=new Set(filtered.map(function(e){return e.id;}));
       state.entries.forEach(function(e,i){
+        if(!filteredSet.has(e.id)) return;
         var m=money(e.amount);
         var after=balAfter[i];
         var mb=after!==null&&after!==undefined?money(Math.abs(after)):null;
@@ -762,6 +771,13 @@
         row.querySelector("[data-del-entry]").addEventListener("click",function(){ removeEntry(e.id); });
         log.appendChild(row);
       });
+      } // end filtered.length check
+    }
+
+    // wire search input
+    if(searchEl && !searchEl._wired){
+      searchEl._wired=true;
+      searchEl.addEventListener("input",function(){ render(); });
     }
 
     // delete handlers for account cards
