@@ -1570,86 +1570,126 @@
 
   // ---- breakdown ----
   function fmtAmt(v){ var m=money(Math.abs(v)); return (v<0?"−":"")+"$"+m.d+"."+m.c; }
+
+  var BD_CATS = [
+    { name:"Food & Dining", color:"#F59E0B", keys:["cafe","coffee","kfc","mcdonald","uber eat","pizza","espresso","bolla","messina","guzman","restaurant","bakery","sushi","noodle","burger","taco","kebab","hungry jack","oporto","grill","bistro","eatery","food","dining","ls kent","donut","muffin","subway","salad","thai","chinese","indian","japanese","nando","domino","red rooster"] },
+    { name:"Transport", color:"#60A5FA", keys:["uber","ola ride","didi","taxi","otr","bp fuel","shell","fuel","petrol","adelaidemetro","metro card","evie","karmo","car wash","parking","toll","airfare","flight","qantas","jetstar","virgin australia","emirates","lyft"] },
+    { name:"Software & SaaS", color:"#A78BFA", keys:["anthropic","openai","highlevel","atlassian","railway","elevenlabs","reclaim","superwhisper","make.com","waves","higgsfield","onlinejobsph","reachinbox","captions","twilio","whop","github","notion","figma","adobe","canva","slack","zoom","dropbox","shopify","stripe","netlify","heroku","aws","google cloud","azure","digitalocean","vercel","cloudflare","namecheap","godaddy","google workspace","gsuite"] },
+    { name:"Advertising", color:"#F472B6", keys:["facebook","meta","facebk","google ads","tiktok ads","twitter ads","linkedin ads","snapchat ads","youtube ads","taboola","outbrain","pinterest ads"] },
+    { name:"Shopping", color:"#34D399", keys:["apple","uniqlo","officeworks","centre com","amazon","ebay","kmart","target","big w","myer","david jones","cotton on","h&m","zara","asos","the iconic","jb hi","harvey norman","good guys","bunnings","ikea","anaconda","rebel sport","footlocker","paypal"] },
+    { name:"Staff & Contractors", color:"#FB923C", keys:["ebony","cody drury","arly dale","porazo","contractor","freelance","upwork","fiverr"] },
+    { name:"Health", color:"#2DD4BF", keys:["pharmacy","chemist","priceline","gym","fitness","health","medical","doctor","dental","hospital","clinic","medicare","optometrist","physio"] },
+    { name:"Subscriptions", color:"#818CF8", keys:["netflix","spotify","disney","apple tv","hulu","amazon prime","youtube premium","paramount","binge","stan","kayo","foxtel","audible"] }
+  ];
+
+  function bdCategorise(title){
+    var t=(title||"").toLowerCase();
+    for(var i=0;i<BD_CATS.length;i++)
+      for(var j=0;j<BD_CATS[i].keys.length;j++)
+        if(t.indexOf(BD_CATS[i].keys[j])!==-1) return BD_CATS[i].name;
+    return "Other";
+  }
+
+  var bdExpanded = {}; // cat -> bool (showing all)
+
   function renderBreakdown(){
-    var CATS = [
-      { name:"Food & Dining", color:"#F59E0B", keys:["cafe","coffee","kfc","mcdonald","uber eat","pizza","espresso","bolla","messina","guzman","restaurant","bakery","sushi","noodle","burger","taco","kebab","hungry jack","oporto","grill","bistro","eatery","food","dining","ls kent","donut","muffin","subway","salad","thai","chinese","indian","japanese","nando","domino","red rooster"] },
-      { name:"Transport", color:"#60A5FA", keys:["uber","ola ride","didi","taxi","otr","bp fuel","shell","fuel","petrol","adelaidemetro","metro card","adelaidemetro","evie","karmo","car wash","parking","toll","airfare","flight","qantas","jetstar","virgin australia","emirates","lyft"] },
-      { name:"Software & SaaS", color:"#A78BFA", keys:["anthropic","openai","highlevel","atlassian","railway","elevenlabs","reclaim","superwhisper","make.com","waves","higgsfield","onlinejobsph","reachinbox","captions","twilio","whop","github","notion","figma","adobe","canva","slack","zoom","dropbox","shopify","stripe","netlify","heroku","aws","google cloud","azure","digitalocean","vercel","cloudflare","namecheap","godaddy","google workspace","gsuite"] },
-      { name:"Advertising", color:"#F472B6", keys:["facebook","meta","facebk","google ads","tiktok ads","twitter ads","linkedin ads","snapchat ads","youtube ads","taboola","outbrain","pinterest ads"] },
-      { name:"Shopping", color:"#34D399", keys:["apple","uniqlo","officeworks","centre com","amazon","ebay","kmart","target","big w","myer","david jones","cotton on","h&m","zara","asos","the iconic","jb hi","harvey norman","good guys","bunnings","ikea","anaconda","rebel sport","footlocker","paypal"] },
-      { name:"Staff & Contractors", color:"#FB923C", keys:["ebony","cody drury","arly dale","porazo","contractor","freelance","upwork","fiverr"] },
-      { name:"Health", color:"#2DD4BF", keys:["pharmacy","chemist","priceline","gym","fitness","health","medical","doctor","dental","hospital","clinic","medicare","optometrist","physio"] },
-      { name:"Subscriptions", color:"#818CF8", keys:["netflix","spotify","disney","apple tv","hulu","amazon prime","youtube premium","paramount","binge","stan","kayo","foxtel","audible"] }
-    ];
+    var catColors = {};
+    BD_CATS.forEach(function(c){ catColors[c.name]=c.color; });
+    catColors["Other"]="#9CA3AF";
 
-    function categorise(title){
-      var t = (title||"").toLowerCase();
-      for(var i=0;i<CATS.length;i++){
-        for(var j=0;j<CATS[i].keys.length;j++){
-          if(t.indexOf(CATS[i].keys[j])!==-1) return CATS[i].name;
-        }
-      }
-      return "Other";
-    }
-
-    var totals = {};
-    CATS.forEach(function(c){ totals[c.name]=0; });
-    totals["Other"]=0;
+    var catEntries = {};
+    BD_CATS.forEach(function(c){ catEntries[c.name]=[]; });
+    catEntries["Other"]=[];
 
     state.entries.forEach(function(e){
       if(e.type!=="out") return;
-      var cat = categorise(e.title);
-      totals[cat] = (totals[cat]||0) + (e.amount||0);
+      var cat=bdCategorise(e.title);
+      catEntries[cat].push(e);
     });
 
-    var catColors = {};
-    CATS.forEach(function(c){ catColors[c.name]=c.color; });
-    catColors["Other"]="#9CA3AF";
+    var totals = {};
+    Object.keys(catEntries).forEach(function(k){ totals[k]=catEntries[k].reduce(function(s,e){return s+(e.amount||0);},0); });
 
-    var totalSpend = Object.values(totals).reduce(function(a,b){return a+b;},0);
-
+    var totalSpend = Object.keys(totals).reduce(function(s,k){return s+totals[k];},0);
     var sorted = Object.keys(totals).filter(function(k){return totals[k]>0;}).sort(function(a,b){return totals[b]-totals[a];});
+    var outCount = state.entries.filter(function(e){return e.type==="out";}).length;
 
     var html = '<div style="padding:4px 0 16px">'
       +'<div style="font-size:13px;color:var(--faint);margin-bottom:18px">Total spend categorised across all accounts · AUD</div>';
 
-    // summary cards row
     html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">';
-    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
-      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Total Out</div>'
-      +'<div style="font-size:22px;font-weight:700;margin-top:4px;color:#F87171">'+fmtAmt(totalSpend)+'</div></div>';
-    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
-      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Categories</div>'
-      +'<div style="font-size:22px;font-weight:700;margin-top:4px">'+sorted.length+'</div></div>';
-    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:140px">'
-      +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Transactions</div>'
-      +'<div style="font-size:22px;font-weight:700;margin-top:4px">'+state.entries.filter(function(e){return e.type==="out";}).length+'</div></div>';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px"><div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Total Out</div><div style="font-size:22px;font-weight:700;margin-top:4px;color:#F87171">'+fmtAmt(totalSpend)+'</div></div>';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px"><div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Categories</div><div style="font-size:22px;font-weight:700;margin-top:4px">'+sorted.length+'</div></div>';
+    html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px"><div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Transactions</div><div style="font-size:22px;font-weight:700;margin-top:4px">'+outCount+'</div></div>';
     html += '</div>';
 
-    // category bars
     sorted.forEach(function(cat){
-      var amt = totals[cat];
-      var pct = totalSpend > 0 ? (amt/totalSpend*100) : 0;
-      var col = catColors[cat]||"#9CA3AF";
-      html += '<div style="background:var(--card);border-radius:14px;padding:16px 18px;margin-bottom:10px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+      var amt=totals[cat];
+      var pct=totalSpend>0?(amt/totalSpend*100):0;
+      var col=catColors[cat]||"#9CA3AF";
+      var txs=catEntries[cat].slice().sort(function(a,b){return (b.amount||0)-(a.amount||0);});
+      var expanded=!!bdExpanded[cat];
+      var showCount=expanded?txs.length:Math.min(7,txs.length);
+      var hasMore=txs.length>7;
+      var safecat=cat.replace(/[^a-zA-Z0-9]/g,"_");
+
+      html += '<div style="background:var(--card);border-radius:14px;padding:16px 18px;margin-bottom:10px">';
+
+      // header row — clickable to expand
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;cursor:pointer" onclick="bdToggle(\''+safecat+'\')">'
         +'<div style="display:flex;align-items:center;gap:10px">'
         +'<div style="width:10px;height:10px;border-radius:50%;background:'+col+';flex-shrink:0"></div>'
         +'<span style="font-weight:600;font-size:14px">'+cat+'</span>'
+        +'<span style="font-size:12px;color:var(--faint)">('+txs.length+')</span>'
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:14px">'
         +'<span style="font-size:12px;color:var(--faint)">'+pct.toFixed(1)+'%</span>'
         +'<span style="font-weight:700;font-size:15px;color:#F87171;font-variant-numeric:tabular-nums">'+fmtAmt(amt)+'</span>'
-        +'</div></div>'
-        +'<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden">'
-        +'<div style="height:100%;border-radius:999px;background:'+col+';width:'+pct.toFixed(2)+'%;transition:width .6s cubic-bezier(.4,0,.2,1)"></div>'
+        +'<svg id="bdchev_'+safecat+'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--faint);transition:transform .2s;transform:rotate('+(expanded?'180':'0')+'deg)"><polyline points="6 9 12 15 18 9"/></svg>'
         +'</div></div>';
+
+      // progress bar
+      html += '<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-bottom:'+(txs.length>0?'12':'0')+'px">'
+        +'<div style="height:100%;border-radius:999px;background:'+col+';width:'+pct.toFixed(2)+'%"></div>'
+        +'</div>';
+
+      // transaction list
+      if(txs.length>0){
+        html += '<div id="bdlist_'+safecat+'" style="'+(expanded||showCount>0?'':'display:none')+'">';
+        for(var i=0;i<showCount;i++){
+          var e=txs[i];
+          html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-top:1px solid rgba(255,255,255,.06)">'
+            +'<div style="overflow:hidden">'
+            +'<div style="font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">'+e.title+'</div>'
+            +'<div style="font-size:11px;color:var(--faint);margin-top:1px">'+e.date+(e.account?' · '+e.account:'')+'</div>'
+            +'</div>'
+            +'<span style="font-size:13px;font-weight:600;color:#F87171;font-variant-numeric:tabular-nums;flex-shrink:0;margin-left:12px">'+fmtAmt(e.amount)+'</span>'
+            +'</div>';
+        }
+        if(hasMore){
+          html += '<div style="padding-top:10px;text-align:center">'
+            +'<button onclick="bdToggle(\''+safecat+'\')" style="background:rgba(255,255,255,.06);border:none;border-radius:8px;padding:6px 18px;font-size:12px;color:var(--faint);cursor:pointer">'
+            +(expanded?'Show less':'View all '+txs.length+' transactions')
+            +'</button></div>';
+        }
+        html += '</div>';
+      }
+
+      html += '</div>';
     });
 
     html += '</div>';
-
     document.getElementById("breakdownContent").innerHTML = html;
   }
+
+  window.bdToggle = function(safecat){
+    // find real cat name from safecat
+    var allCats = BD_CATS.map(function(c){return c.name;}).concat(["Other"]);
+    var cat = allCats.find(function(c){ return c.replace(/[^a-zA-Z0-9]/g,"_")===safecat; });
+    if(!cat) return;
+    bdExpanded[cat] = !bdExpanded[cat];
+    renderBreakdown();
+  };
 
   // ---- page nav ----
   Array.prototype.forEach.call(document.querySelectorAll(".navbtn"),function(b){
