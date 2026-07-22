@@ -1904,16 +1904,34 @@
     bdSavePrefs();
   };
 
-  window.bdToggleType = function(eid, td){
-    var cur = bdTypeOverrides[eid] || 'business';
-    var next = cur==='business' ? 'personal' : 'business';
-    bdTypeOverrides[eid]=next;
+  window.bdTypeCellKey = function(ev, eid, td){
+    var k = ev.key;
+    if(k==='ArrowDown'||k==='ArrowUp'){
+      ev.preventDefault();
+      var cells = Array.prototype.slice.call(document.querySelectorAll('.raw-type-cell'));
+      var idx = cells.indexOf(td);
+      var next = cells[idx+(k==='ArrowDown'?1:-1)];
+      if(next) next.focus();
+      return;
+    }
+    if(k==='b'||k==='B'){ ev.preventDefault(); bdApplyType(eid,td,'business'); return; }
+    if(k==='p'||k==='P'){ ev.preventDefault(); bdApplyType(eid,td,'personal'); return; }
+    if(k===' '||k==='Enter'){ ev.preventDefault(); bdToggleType(eid,td); return; }
+  };
+
+  window.bdApplyType = function(eid, td, val){
+    bdTypeOverrides[eid]=val;
     bdSavePrefs();
-    var label = next.charAt(0).toUpperCase()+next.slice(1);
-    var bg = next==='personal' ? 'rgba(168,139,250,.15)' : 'rgba(99,102,241,.15)';
-    var clr = next==='personal' ? '#C4B5FD' : '#818CF8';
+    var label = val.charAt(0).toUpperCase()+val.slice(1);
+    var bg = val==='personal' ? 'rgba(168,139,250,.15)' : 'rgba(99,102,241,.15)';
+    var clr = val==='personal' ? '#C4B5FD' : '#818CF8';
     var div = td.querySelector('div');
     if(div){ div.textContent=label; div.style.background=bg; div.style.color=clr; }
+  };
+
+  window.bdToggleType = function(eid, td){
+    var cur = bdTypeOverrides[eid] || 'business';
+    bdApplyType(eid, td, cur==='business' ? 'personal' : 'business');
   };
 
   window.bdRawSortBy = function(col){
@@ -1989,7 +2007,7 @@
         +'<td style="padding:9px 14px">'+inOutBadge+'</td>'
         +'<td style="padding:9px 14px;color:var(--faint);white-space:nowrap;font-size:12px">'+(e.account||'')+'</td>'
         +'<td style="padding:9px 14px;text-align:right;white-space:nowrap;color:'+amtColor+';font-weight:600">'+amtStr+'</td>'
-        +'<td tabindex="0" onclick="bdToggleType(\''+e.id+'\',this)" onkeydown="if(event.key===\' \'||event.key===\'Enter\'){event.preventDefault();bdToggleType(\''+e.id+'\',this);}" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-type-cell">'
+        +'<td tabindex="0" onclick="bdToggleType(\''+e.id+'\',this)" onkeydown="bdTypeCellKey(event,\''+e.id+'\',this)" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-type-cell">'
         +'<div style="margin:5px 10px;padding:4px 12px;border-radius:6px;background:'+typeBg+';color:'+typeClr+';font-size:12px;font-weight:600;letter-spacing:.02em;text-align:center;user-select:text">'+typeLabel+'</div>'
         +'</td>'
         +'</tr>';
