@@ -1600,6 +1600,18 @@
   var bdCustomCats = [];
   var BD_EXTRA_COLORS = ["#E879F9","#38BDF8","#FB7185","#A3E635","#FBBF24","#34D399"];
 
+  function bdPrefsKey(){ return "ledger_bd_prefs_"+(currentUser||""); }
+  function bdSavePrefs(){
+    try{ localStorage.setItem(bdPrefsKey(), JSON.stringify({overrides:bdOverrides,customCats:bdCustomCats})); }catch(e){}
+  }
+  function bdLoadPrefs(){
+    try{
+      var raw=localStorage.getItem(bdPrefsKey());
+      if(raw){ var p=JSON.parse(raw); bdOverrides=p.overrides||{}; bdCustomCats=p.customCats||[]; }
+      else { bdOverrides={}; bdCustomCats=[]; }
+    }catch(e){ bdOverrides={}; bdCustomCats=[]; }
+  }
+
   function bdAllCatNames(){
     return BD_CATS.map(function(c){return c.name;}).concat(bdCustomCats.map(function(c){return c.name;})).concat(["Other"]);
   }
@@ -1798,6 +1810,7 @@
     } else {
       bdOverrides[eid]=val;
     }
+    bdSavePrefs();
     renderBreakdown();
   };
 
@@ -1885,6 +1898,7 @@
     document.getElementById("authScreen").classList.add("hidden");
     document.getElementById("mainWrap").style.display="";
     document.getElementById("avatarEl").textContent=email.charAt(0).toUpperCase();
+    bdLoadPrefs();
     var loaded=await store.load();
     state = loaded && loaded.accounts ? loaded : JSON.parse(JSON.stringify(DEFAULT));
     var migrated=false;
@@ -1898,6 +1912,7 @@
   document.getElementById("logoutBtn").addEventListener("click",function(){
     clearSession();
     currentUser=null;
+    bdOverrides={}; bdCustomCats=[]; bdSortedOrder=null;
     state=JSON.parse(JSON.stringify(DEFAULT));
     document.getElementById("mainWrap").style.display="none";
     document.getElementById("authScreen").classList.remove("hidden");
