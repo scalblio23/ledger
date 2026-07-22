@@ -2466,6 +2466,8 @@
         d=bdEffectiveCat(a).localeCompare(bdEffectiveCat(b));
       } else if(bdRawSort.col==='type'){
         d=(bdTypeOverrides[a.id]||'business').localeCompare(bdTypeOverrides[b.id]||'business');
+      } else if(bdRawSort.col==='inout'){
+        d=(a.type||'').localeCompare(b.type||'');
       }
       return d*bdRawSort.dir;
     });
@@ -2484,7 +2486,7 @@
       +thSort('date','Date')
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Transaction</th>'
       +thSort('category','Category')
-      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">In/Out</th>'
+      +thSort('inout','In/Out')
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Account</th>'
       +'<th style="padding:12px 14px;text-align:right;color:var(--faint);font-weight:600">Amount</th>'
       +thSort('type','Type')
