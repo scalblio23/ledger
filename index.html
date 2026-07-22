@@ -1592,6 +1592,8 @@
 
   // bdState per cat: 'closed' | 'partial' | 'all'
   var bdState = {};
+  // locked sort order — set once on first render, cleared on page reload naturally
+  var bdSortedOrder = null;
   // per entry-id category override
   var bdOverrides = {};
   // user-created custom categories
@@ -1657,7 +1659,9 @@
     Object.keys(catEntries).forEach(function(k){ totals[k]=catEntries[k].reduce(function(s,e){return s+(e.amount||0);},0); });
 
     var totalSpend = Object.keys(totals).reduce(function(s,k){return s+totals[k];},0);
-    var sorted = Object.keys(totals).filter(function(k){return totals[k]>0;}).sort(function(a,b){return totals[b]-totals[a];});
+    // lock sort order on first render; only re-sort on page refresh
+    if(!bdSortedOrder) bdSortedOrder = Object.keys(totals).filter(function(k){return totals[k]>0;}).sort(function(a,b){return totals[b]-totals[a];});
+    var sorted = bdSortedOrder.filter(function(k){return totals[k]>0;});
     var outCount = state.entries.filter(function(e){return e.type==="out";}).length;
     var allCatNames = bdAllCatNames();
 
