@@ -1653,7 +1653,8 @@
     { name:"Shopping", color:"#34D399", keys:["apple","uniqlo","officeworks","centre com","amazon","ebay","kmart","target","big w","myer","david jones","cotton on","h&m","zara","asos","the iconic","jb hi","harvey norman","good guys","bunnings","ikea","anaconda","rebel sport","footlocker","paypal"] },
     { name:"Staff & Contractors", color:"#FB923C", keys:["ebony","cody drury","arly dale","porazo","contractor","freelance","upwork","fiverr"] },
     { name:"Health", color:"#2DD4BF", keys:["pharmacy","chemist","priceline","gym","fitness","health","medical","doctor","dental","hospital","clinic","medicare","optometrist","physio"] },
-    { name:"Subscriptions", color:"#818CF8", keys:["netflix","spotify","disney","apple tv","hulu","amazon prime","youtube premium","paramount","binge","stan","kayo","foxtel","audible"] }
+    { name:"Subscriptions", color:"#818CF8", keys:["netflix","spotify","disney","apple tv","hulu","amazon prime","youtube premium","paramount","binge","stan","kayo","foxtel","audible"] },
+    { name:"Transfer", color:"#6B7280", keys:["transfer to ","transfer from "] }
   ];
 
   function bdCategorise(title){
@@ -1706,6 +1707,8 @@
   function bdEffectiveCat(e){
     return bdOverrides[e.id] || bdCategorise(e.title);
   }
+  // returns true if this entry is a transfer (auto-detected or manually categorised)
+  function isBdTransfer(e){ return bdEffectiveCat(e)==='Transfer' || isTransfer(e); }
 
   function bdDonut(sorted, totals, catColors, totalSpend){
     var cx=100,cy=100,R=82,ri=54;
@@ -1743,8 +1746,9 @@
 
     state.entries.forEach(function(e){
       if(e.type!=="out") return;
-      if(isTransfer(e)) return;
+      if(isBdTransfer(e)) return;
       var cat=bdEffectiveCat(e);
+      if(cat==='Transfer') return;
       if(!catEntries[cat]) catEntries[cat]=[];
       catEntries[cat].push(e);
     });
@@ -1806,7 +1810,7 @@
     // business vs personal comparison
     var biz=0, bizCount=0, per=0, perCount=0, uncat=0, uncatCount=0;
     state.entries.forEach(function(e){
-      if(e.type!=='out'||isTransfer(e)) return;
+      if(e.type!=='out'||isBdTransfer(e)) return;
       var t=bdTypeOverrides[e.id]||'business';
       if(t==='personal'){ per+=(e.amount||0); perCount++; }
       else { biz+=(e.amount||0); bizCount++; }
@@ -2233,7 +2237,7 @@
     // aggregate totals
     var totalSales=0, totalCOGS=0, totalOverhead=0;
     state.entries.forEach(function(e){
-      if(isTransfer(e)) return;
+      if(isBdTransfer(e)) return;
       if(e.type==='in'){ totalSales+=(e.amount||0); return; }
       if(e.type!=='out') return;
       var cost=bdCostOverrides[e.id]||'na';
@@ -2327,7 +2331,7 @@
     }
 
     state.entries.forEach(function(e){
-      if(isTransfer(e)) return;
+      if(isBdTransfer(e)) return;
       var k=periodKey(e.date);
       if(!periods[k]) periods[k]={sales:0,cogs:0,overhead:0};
       if(e.type==='in'){ periods[k].sales+=(e.amount||0); }
@@ -2408,10 +2412,11 @@
     catEntries2["Other"]=[];
 
     state.entries.forEach(function(e){
-      if(e.type!=='out'||isTransfer(e)) return;
+      if(e.type!=='out'||isBdTransfer(e)) return;
       var t = bdTypeOverrides[e.id]||'business';
       if(t!==typeView) return;
       var cat=bdEffectiveCat(e);
+      if(cat==='Transfer') return;
       if(!catEntries2[cat]) catEntries2[cat]=[];
       catEntries2[cat].push(e);
     });
