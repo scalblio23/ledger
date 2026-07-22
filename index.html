@@ -908,6 +908,8 @@
       var cfPage=document.getElementById("page-cashflow");
       var payPage=document.getElementById("page-payments");
       var wgPage=document.getElementById("page-wages");
+      var bdPage=document.getElementById("page-breakdown");
+      if(bdPage && bdPage.classList.contains("active")) return;
       if(cfPage && cfPage.classList.contains("active")) openCashflow();
       else if(payPage && payPage.classList.contains("active")) openPayment(null);
       else if(wgPage && wgPage.classList.contains("active")) openWage(null);
