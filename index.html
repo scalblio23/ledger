@@ -1760,6 +1760,12 @@
       +'</div>';
 
     if(bdView==='raw'){
+      var undoOp = _undoStack.length, redoOp = _redoStack.length;
+      html += '<div style="display:flex;gap:6px;margin-bottom:16px;align-items:center">'
+        +'<button id="bd-undo-btn" onclick="bdUndo()" title="Undo (Ctrl+Z)" style="padding:5px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--card);color:var(--text);opacity:'+(undoOp?'1':'.35')+';pointer-events:'+(undoOp?'auto':'none')+'">↩ Undo</button>'
+        +'<button id="bd-redo-btn" onclick="bdRedo()" title="Redo (Ctrl+Y)" style="padding:5px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:var(--card);color:var(--text);opacity:'+(redoOp?'1':'.35')+';pointer-events:'+(redoOp?'auto':'none')+'">↪ Redo</button>'
+        +'<span style="font-size:11px;color:var(--faint);margin-left:4px">Ctrl+Z / Ctrl+Y</span>'
+        +'</div>';
       document.getElementById('breakdownContent').innerHTML=html+renderBreakdownRaw(allCatNames)+'</div>';
       return;
     }
@@ -1885,15 +1891,18 @@
 
   window.bdMoveTx = function(eid, sel){
     var val = sel.value;
+    var prev = bdOverrides[eid] || bdCategorise((state.entries.find(function(e){return e.id===eid;})||{}).title||'');
     if(val==='__new__'){
       var name=(prompt('New category name:')||'').trim();
-      if(!name){ sel.value=bdOverrides[eid]||bdCategorise((state.entries.find(function(e){return e.id===eid;})||{}).title||''); return; }
+      if(!name){ sel.value=prev; return; }
       if(!bdCustomCats.find(function(c){return c.name===name;})){
         var col=BD_EXTRA_COLORS[bdCustomCats.length % BD_EXTRA_COLORS.length];
         bdCustomCats.push({name:name,color:col});
       }
       bdOverrides[eid]=name;
+      bdPushHistory({field:'category',eid:eid,prev:prev,next:name});
     } else {
+      if(prev!==val) bdPushHistory({field:'category',eid:eid,prev:prev,next:val});
       bdOverrides[eid]=val;
     }
     bdSavePrefs();
@@ -1907,6 +1916,55 @@
     bdTypeOverrides[eid]=val;
     bdSavePrefs();
   };
+
+  // --- undo / redo for raw sheet ---
+  var _undoStack = [], _redoStack = [];
+
+  function bdPushHistory(entry){ _undoStack.push(entry); _redoStack=[]; bdUpdateUndoUI(); }
+
+  function bdUpdateUndoUI(){
+    var u=document.getElementById('bd-undo-btn'), r=document.getElementById('bd-redo-btn');
+    if(u) u.style.opacity=_undoStack.length?'1':'.35', u.style.pointerEvents=_undoStack.length?'auto':'none';
+    if(r) r.style.opacity=_redoStack.length?'1':'.35', r.style.pointerEvents=_redoStack.length?'auto':'none';
+  }
+
+  window.bdUndo = function(){
+    if(!_undoStack.length) return;
+    var e=_undoStack.pop(); _redoStack.push(e);
+    bdApplyHistoryEntry(e, true);
+    bdUpdateUndoUI();
+  };
+
+  window.bdRedo = function(){
+    if(!_redoStack.length) return;
+    var e=_redoStack.pop(); _undoStack.push(e);
+    bdApplyHistoryEntry(e, false);
+    bdUpdateUndoUI();
+  };
+
+  function bdApplyHistoryEntry(e, isUndo){
+    var val = isUndo ? e.prev : e.next;
+    if(e.field==='type'){
+      var tds = document.querySelectorAll('.raw-type-cell');
+      var td = Array.prototype.find ? Array.prototype.find.call(tds,function(c){return c.dataset.eid===e.eid;}) : null;
+      if(!td){ for(var i=0;i<tds.length;i++){if(tds[i].dataset.eid===e.eid){td=tds[i];break;}} }
+      bdTypeOverrides[e.eid]=val;
+      bdSavePrefs();
+      if(td){ var label=val.charAt(0).toUpperCase()+val.slice(1); var bg=val==='personal'?'rgba(168,139,250,.15)':'rgba(99,102,241,.15)'; var clr=val==='personal'?'#C4B5FD':'#818CF8'; var div=td.querySelector('div'); if(div){div.textContent=label;div.style.background=bg;div.style.color=clr;} }
+    } else if(e.field==='category'){
+      bdOverrides[e.eid]=val;
+      bdSavePrefs();
+      renderBreakdown();
+    }
+  }
+
+  // keyboard shortcut (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z) — active when raw view open
+  document.addEventListener('keydown', function(ev){
+    if(bdView!=='raw') return;
+    var mod = ev.ctrlKey||ev.metaKey;
+    if(mod && ev.key==='z' && !ev.shiftKey){ ev.preventDefault(); bdUndo(); }
+    if(mod && (ev.key==='y'||(ev.key==='z'&&ev.shiftKey))){ ev.preventDefault(); bdRedo(); }
+  });
 
   // --- type cell selection + fill handle ---
   var _rtcSelected = null; // currently selected td
@@ -1973,12 +2031,14 @@
     var cells = _fillDrag.cells;
     var from = Math.min(_fillDrag.anchorIdx, _fillDrag.overIdx||_fillDrag.anchorIdx);
     var to   = Math.max(_fillDrag.anchorIdx, _fillDrag.overIdx||_fillDrag.anchorIdx);
+    // push each changed cell to history individually so undo reverses them one-by-one
     cells.slice(from, to+1).forEach(function(c){
       c.classList.remove('rtc-fill-preview');
       var ceid = c.dataset.eid;
-      if(ceid) bdApplyType(ceid, c, _fillDrag.val);
+      if(ceid) bdApplyType(ceid, c, _fillDrag.val); // bdApplyType handles history push
     });
     _fillDrag = null;
+    bdUpdateUndoUI();
   }
 
   window.bdTypeCellKey = function(ev, eid, td){
@@ -1996,13 +2056,15 @@
     if(k===' '||k==='Enter'){ ev.preventDefault(); bdToggleType(eid,td); return; }
   };
 
-  window.bdApplyType = function(eid, td, val){
+  window.bdApplyType = function(eid, td, val, skipHistory){
+    var prev = bdTypeOverrides[eid] || 'business';
+    if(!skipHistory && prev!==val) bdPushHistory({field:'type',eid:eid,prev:prev,next:val});
     bdTypeOverrides[eid]=val;
     bdSavePrefs();
     var label = val.charAt(0).toUpperCase()+val.slice(1);
     var bg = val==='personal' ? 'rgba(168,139,250,.15)' : 'rgba(99,102,241,.15)';
     var clr = val==='personal' ? '#C4B5FD' : '#818CF8';
-    var div = td.querySelector('div');
+    var div = td ? td.querySelector('div') : null;
     if(div){ div.textContent=label; div.style.background=bg; div.style.color=clr; }
   };
 
