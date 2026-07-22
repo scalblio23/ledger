@@ -1769,6 +1769,7 @@
       +tabBtn('overview','Overview')
       +tabBtn('business','Business')
       +tabBtn('personal','Personal')
+      +tabBtn('pl','Profit & Loss')
       +tabBtn('raw','Raw')
       +'</div>';
 
@@ -1785,6 +1786,11 @@
 
     if(bdView==='business'||bdView==='personal'){
       document.getElementById('breakdownContent').innerHTML=html+renderBreakdownType(bdView,allCatNames,catColors)+'</div>';
+      return;
+    }
+
+    if(bdView==='pl'){
+      document.getElementById('breakdownContent').innerHTML=html+renderBreakdownPL()+'</div>';
       return;
     }
 
@@ -2219,6 +2225,177 @@
     if(bdRawSort.col===col){ bdRawSort.dir*=-1; } else { bdRawSort={col:col,dir:1}; }
     renderBreakdown();
   };
+
+  var plPeriod = 'month'; // 'month' | 'week' | 'day'
+  window.plSetPeriod = function(p){ plPeriod=p; renderBreakdown(); };
+
+  function renderBreakdownPL(){
+    // aggregate totals
+    var totalSales=0, totalCOGS=0, totalOverhead=0;
+    state.entries.forEach(function(e){
+      if(isTransfer(e)) return;
+      if(e.type==='in'){ totalSales+=(e.amount||0); return; }
+      if(e.type!=='out') return;
+      var cost=bdCostOverrides[e.id]||'na';
+      if(cost==='cogs') totalCOGS+=(e.amount||0);
+      else if(cost==='overhead') totalOverhead+=(e.amount||0);
+    });
+    var grossProfit=totalSales-totalCOGS;
+    var netProfit=grossProfit-totalOverhead;
+    var grossMargin=totalSales>0?(grossProfit/totalSales*100):0;
+    var netMargin=totalSales>0?(netProfit/totalSales*100):0;
+
+    function fmt(v){ var m=money(Math.abs(v)); return (v<0?'−':'')+'$'+m.d+'.'+m.c; }
+    function pctStr(p){ return (p>=0?'+':'')+p.toFixed(1)+'%'; }
+    function clr(v){ return v>=0?'#4ADE80':'#F87171'; }
+
+    var h='';
+
+    // P&L summary cascade
+    h += '<div style="background:var(--card);border-radius:16px;padding:24px;margin-bottom:20px">';
+    h += '<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:20px">Profit & Loss Summary · AUD</div>';
+
+    function plRow(label, sublabel, value, margin, color, borderTop, big){
+      var fs = big?'26px':'20px';
+      var bt = borderTop?'border-top:1px solid rgba(255,255,255,.06);padding-top:16px;margin-top:16px':'';
+      return '<div style="'+bt+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div><div style="font-size:'+(big?'13px':'12px')+';color:var(--faint);margin-bottom:2px">'+label+'</div>'
+        +(sublabel?'<div style="font-size:11px;color:rgba(255,255,255,.2);margin-top:1px">'+sublabel+'</div>':'')
+        +'</div>'
+        +'<div style="text-align:right">'
+        +'<div style="font-size:'+fs+';font-weight:700;font-variant-numeric:tabular-nums;color:'+color+'">'+fmt(value)+'</div>'
+        +(margin!==null?'<div style="font-size:11px;color:'+color+';opacity:.75;margin-top:2px">'+pctStr(margin)+'</div>':'')
+        +'</div></div>';
+    }
+
+    h += plRow('Total Sales','All incoming transactions',totalSales,null,'var(--text)',false,false);
+    h += '<div style="margin:14px 0;display:flex;align-items:center;gap:10px">'
+      +'<div style="flex:1;height:1px;background:rgba(255,255,255,.06)"></div>'
+      +'<span style="font-size:11px;color:var(--faint)">− COGS <span style="color:#FBBF24">'+fmt(totalCOGS)+'</span></span>'
+      +'</div>';
+    h += plRow('Gross Profit','After cost of goods sold',grossProfit,grossMargin,clr(grossProfit),false,false);
+    h += '<div style="margin:14px 0;display:flex;align-items:center;gap:10px">'
+      +'<div style="flex:1;height:1px;background:rgba(255,255,255,.06)"></div>'
+      +'<span style="font-size:11px;color:var(--faint)">− Overhead <span style="color:#34D399">'+fmt(totalOverhead)+'</span></span>'
+      +'</div>';
+    h += plRow('Net Profit','After all expenses',netProfit,netMargin,clr(netProfit),false,true);
+    h += '</div>';
+
+    // metric tiles
+    h += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">';
+    function tile(label, value, sub, color){
+      return '<div style="background:var(--card);border-radius:14px;padding:14px 18px;flex:1;min-width:130px">'
+        +'<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">'+label+'</div>'
+        +'<div style="font-size:20px;font-weight:700;color:'+color+';font-variant-numeric:tabular-nums">'+value+'</div>'
+        +(sub?'<div style="font-size:11px;color:var(--faint);margin-top:3px">'+sub+'</div>':'')
+        +'</div>';
+    }
+    h += tile('Gross Margin',pctStr(grossMargin),'Sales − COGS',clr(grossProfit));
+    h += tile('Net Margin',pctStr(netMargin),'After overhead',clr(netProfit));
+    h += tile('COGS',fmt(totalCOGS),'Cost of goods',  '#FBBF24');
+    h += tile('Overhead',fmt(totalOverhead),'Running costs','#34D399');
+    h += '</div>';
+
+    // period breakdown
+    var periods = {};
+    function periodKey(date){
+      if(!date) return 'Unknown';
+      var d=new Date(date);
+      if(isNaN(d)) return date;
+      if(plPeriod==='month'){
+        return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+      } else if(plPeriod==='week'){
+        // ISO week: Monday-based
+        var tmp=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+        var dow=tmp.getUTCDay()||7;
+        tmp.setUTCDate(tmp.getUTCDate()+4-dow);
+        var y=tmp.getUTCFullYear();
+        var wk=Math.ceil(((tmp-new Date(Date.UTC(y,0,1)))/86400000+1)/7);
+        return y+'-W'+(wk<10?'0':'')+wk;
+      } else {
+        return date;
+      }
+    }
+    function periodLabel(key){
+      if(plPeriod==='month'){
+        var parts=key.split('-');
+        var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return months[parseInt(parts[1])-1]+' '+parts[0];
+      }
+      return key;
+    }
+
+    state.entries.forEach(function(e){
+      if(isTransfer(e)) return;
+      var k=periodKey(e.date);
+      if(!periods[k]) periods[k]={sales:0,cogs:0,overhead:0};
+      if(e.type==='in'){ periods[k].sales+=(e.amount||0); }
+      else if(e.type==='out'){
+        var cost=bdCostOverrides[e.id]||'na';
+        if(cost==='cogs') periods[k].cogs+=(e.amount||0);
+        else if(cost==='overhead') periods[k].overhead+=(e.amount||0);
+      }
+    });
+
+    var pkeys=Object.keys(periods).sort();
+    var maxAbs=0;
+    pkeys.forEach(function(k){
+      var p=periods[k];
+      var net=p.sales-p.cogs-p.overhead;
+      maxAbs=Math.max(maxAbs,Math.abs(p.sales),Math.abs(net));
+    });
+
+    // period toggle
+    function periodBtn(v,label){ return '<button onclick="plSetPeriod(\''+v+'\')" style="padding:5px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;'+(plPeriod===v?'background:#6366F1;color:#fff':'background:rgba(255,255,255,.06);color:var(--faint)')+'">' +label+'</button>'; }
+    h += '<div style="background:var(--card);border-radius:16px;padding:20px 22px">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">';
+    h += '<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em">Profit by Period</div>';
+    h += '<div style="display:flex;gap:6px">'+periodBtn('month','Month')+periodBtn('week','Week')+periodBtn('day','Day')+'</div>';
+    h += '</div>';
+
+    if(!pkeys.length){
+      h += '<div style="text-align:center;padding:32px 0;color:var(--faint);font-size:13px">No data yet.</div>';
+    } else {
+      // chart bars
+      var barH=48;
+      h += '<div style="display:flex;flex-direction:column;gap:10px">';
+      pkeys.forEach(function(k){
+        var p=periods[k];
+        var gp=p.sales-p.cogs;
+        var np=gp-p.overhead;
+        var salesW=maxAbs>0?Math.round(p.sales/maxAbs*100):0;
+        var npW=maxAbs>0?Math.round(Math.abs(np)/maxAbs*100):0;
+        var npClr=np>=0?'#4ADE80':'#F87171';
+        h += '<div style="display:grid;grid-template-columns:80px 1fr 90px;gap:12px;align-items:center">';
+        h += '<div style="font-size:12px;color:var(--faint);text-align:right;white-space:nowrap">'+periodLabel(k)+'</div>';
+        h += '<div style="position:relative;display:flex;flex-direction:column;gap:4px">';
+        // sales bar
+        h += '<div style="display:flex;align-items:center;gap:6px">';
+        h += '<div style="height:10px;border-radius:4px;background:#6366F1;width:'+salesW+'%;min-width:'+(p.sales>0?'3px':'0')+';transition:width .3s"></div>';
+        h += '</div>';
+        // net profit bar
+        h += '<div style="display:flex;align-items:center;gap:6px">';
+        h += '<div style="height:10px;border-radius:4px;background:'+npClr+';width:'+npW+'%;min-width:'+(np!==0?'3px':'0')+';transition:width .3s"></div>';
+        h += '</div>';
+        h += '</div>';
+        h += '<div style="font-size:12px;text-align:right">'
+          +'<div style="color:var(--faint);font-variant-numeric:tabular-nums">'+fmt(p.sales)+'</div>'
+          +'<div style="color:'+npClr+';font-weight:600;font-variant-numeric:tabular-nums">'+fmt(np)+'</div>'
+          +'</div>';
+        h += '</div>';
+      });
+      h += '</div>';
+      // legend
+      h += '<div style="display:flex;gap:16px;margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06)">';
+      h += '<div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:4px;border-radius:2px;background:#6366F1"></div><span style="font-size:11px;color:var(--faint)">Sales</span></div>';
+      h += '<div style="display:flex;align-items:center;gap:6px"><div style="width:10px;height:4px;border-radius:2px;background:#4ADE80"></div><span style="font-size:11px;color:var(--faint)">Net Profit</span></div>';
+      h += '</div>';
+    }
+    h += '</div>';
+
+    return h;
+  }
 
   function renderBreakdownType(typeView, allCatNames, catColors){
     var accent = typeView==='business' ? '#6366F1' : '#A78BFA';
