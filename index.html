@@ -562,6 +562,7 @@
   var state = JSON.parse(JSON.stringify(DEFAULT)), editing = false, firstPaint = true;
   var selMonth = null;
   var cfCompact = false;
+  function isTransfer(e){ var t=(e.title||"").toLowerCase(); return t.indexOf("transfer to ")===0||t.indexOf("transfer from ")===0; }
   var typeFilter = null; // null | 'in' | 'out'
   var acctFilter = null; // null | account name
 
@@ -696,7 +697,7 @@
 
     // flows from entries
     var inSum=0,outSum=0;
-    state.entries.forEach(function(e){ if(e.type==="in") inSum+=(+e.amount||0); else outSum+=(+e.amount||0); });
+    state.entries.forEach(function(e){ if(isTransfer(e)) return; if(e.type==="in") inSum+=(+e.amount||0); else outSum+=(+e.amount||0); });
     document.getElementById("flowIn").textContent="$"+inSum.toLocaleString("en-AU",{maximumFractionDigits:0});
     document.getElementById("flowOut").textContent="$"+outSum.toLocaleString("en-AU",{maximumFractionDigits:0});
     // type filter pills
@@ -827,7 +828,7 @@
         row.innerHTML=
           '<div class="ic">'+(e.type==="in"?IN_SVG:OUT_SVG)+'</div>'+
           '<div class="desc"><div class="t">'+esc(e.title)+'</div>'+
-            '<div class="s">'+esc(e.account||"")+' <span class="cat">'+(e.type==="in"?"· Income":"· Expense")+'</span> · '+esc(e.date||"")+'</div></div>'+
+            '<div class="s">'+esc(e.account||"")+' <span class="cat">'+(e.type==="in"?(isTransfer(e)?"· Transfer":"· Income"):(isTransfer(e)?"· Transfer":"· Expense"))+'</span> · '+esc(e.date||"")+'</div></div>'+
           '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">'+
             '<div class="amt'+(e.type==="in"?" pos":"")+'">'+(e.type==="in"?"+":"−")+'$'+m.d+'<span class="c">.'+m.c+'</span></div>'+
             (e.origUsd?'<div class="bal-after">USD '+e.origUsd.toFixed(2)+' @ '+(e.usdRate||1.58).toFixed(4)+'</div>':'')+
@@ -1723,6 +1724,7 @@
 
     state.entries.forEach(function(e){
       if(e.type!=="out") return;
+      if(isTransfer(e)) return;
       var cat=bdEffectiveCat(e);
       if(!catEntries[cat]) catEntries[cat]=[];
       catEntries[cat].push(e);
@@ -1735,7 +1737,7 @@
     // lock sort order on first render; only re-sort on page refresh
     if(!bdSortedOrder) bdSortedOrder = Object.keys(totals).filter(function(k){return totals[k]>0;}).sort(function(a,b){return totals[b]-totals[a];});
     var sorted = bdSortedOrder.filter(function(k){return totals[k]>0;});
-    var outCount = state.entries.filter(function(e){return e.type==="out";}).length;
+    var outCount = state.entries.filter(function(e){return e.type==="out"&&!isTransfer(e);}).length;
     var allCatNames = bdAllCatNames();
 
     var html = '<div style="padding:4px 0 16px">'
