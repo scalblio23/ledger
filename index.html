@@ -1666,6 +1666,7 @@
   var BD_EXTRA_COLORS = ["#E879F9","#38BDF8","#FB7185","#A3E635","#FBBF24","#34D399"];
   // current breakdown view: 'overview' | 'raw'
   var bdView = 'overview';
+  window.bdSetView = function(v){ bdView=v; renderBreakdown(); };
 
   function bdPrefsKey(){ return "ledger_bd_prefs_"+(currentUser||""); }
   function bdSavePrefs(){
@@ -1747,8 +1748,8 @@
 
     var html = '<div style="padding:4px 0 16px">'
       +'<div style="display:flex;gap:8px;margin-bottom:20px">'
-      +'<button onclick="bdView=\'overview\';renderBreakdown();" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='overview'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Overview</button>'
-      +'<button onclick="bdView=\'raw\';renderBreakdown();" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='raw'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Raw</button>'
+      +'<button onclick="bdSetView(\'overview\')" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='overview'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Overview</button>'
+      +'<button onclick="bdSetView(\'raw\')" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='raw'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Raw</button>'
       +'</div>';
 
     if(bdView==='raw'){
