@@ -1893,19 +1893,52 @@
     renderBreakdown();
   };
 
+  // sort state for raw table: {col:'date'|'category', dir:1|-1}
+  var bdRawSort = {col:'date', dir:-1};
+
   window.bdSetType = function(eid, val){
     bdTypeOverrides[eid]=val;
     bdSavePrefs();
   };
 
+  window.bdTypeBlur = function(el, eid){
+    var raw = (el.innerText||'').trim().toLowerCase();
+    var val = raw.indexOf('p')===0 ? 'personal' : 'business';
+    el.innerText = val.charAt(0).toUpperCase()+val.slice(1);
+    bdTypeOverrides[eid]=val;
+    bdSavePrefs();
+  };
+
+  window.bdRawSortBy = function(col){
+    if(bdRawSort.col===col){ bdRawSort.dir*=-1; } else { bdRawSort={col:col,dir:1}; }
+    renderBreakdown();
+  };
+
   function renderBreakdownRaw(allCatNames){
-    var entries = state.entries.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var entries = state.entries.slice().sort(function(a,b){
+      var d=0;
+      if(bdRawSort.col==='date'){
+        d=(a.date||'').localeCompare(b.date||'');
+      } else if(bdRawSort.col==='category'){
+        d=bdEffectiveCat(a).localeCompare(bdEffectiveCat(b));
+      }
+      return d*bdRawSort.dir;
+    });
+
+    function sortArrow(col){
+      if(bdRawSort.col!==col) return '<span style="opacity:.3;margin-left:4px">⇅</span>';
+      return '<span style="margin-left:4px">'+(bdRawSort.dir>0?'↑':'↓')+'</span>';
+    }
+    function thSort(col,label){
+      return '<th onclick="bdRawSortBy(\''+col+'\')" style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;transition:color .15s" onmouseover="this.style.color=\'var(--text)\'" onmouseout="this.style.color=\'var(--faint)\'">'+label+sortArrow(col)+'</th>';
+    }
+
     var h = '<div style="overflow-x:auto;border-radius:16px;background:var(--card);box-shadow:0 4px 20px rgba(0,0,0,.25)">'
       +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
       +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,.08)">'
-      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600;white-space:nowrap">Date</th>'
+      +thSort('date','Date')
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Transaction</th>'
-      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600;white-space:nowrap">Category</th>'
+      +thSort('category','Category')
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">In/Out</th>'
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Account</th>'
       +'<th style="padding:12px 14px;text-align:right;color:var(--faint);font-weight:600">Amount</th>'
@@ -1913,6 +1946,7 @@
       +'</tr></thead><tbody>';
 
     var selStyle = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text);font-size:12px;padding:4px 8px;cursor:pointer;outline:none;max-width:140px';
+    var cellStyle = 'display:inline-block;min-width:80px;padding:4px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);font-size:12px;color:var(--text);cursor:text;outline:none;white-space:nowrap;';
 
     entries.forEach(function(e,i){
       var isEven = i%2===0;
@@ -1925,17 +1959,17 @@
       var cat = bdEffectiveCat(e);
       var catColor = bdColorFor(cat);
       var typeVal = bdTypeOverrides[e.id] || 'business';
+      var typeLabel = typeVal.charAt(0).toUpperCase()+typeVal.slice(1);
 
-      // category select
       var catOpts = allCatNames.map(function(n){ return '<option value="'+n+'"'+(n===cat?' selected':'')+'>'+n+'</option>'; }).join('');
       catOpts += '<option value="__new__">+ New…</option>';
       var catSel = '<select style="'+selStyle+'" onchange="bdMoveTx(\''+e.id+'\',this.value,this)">'+catOpts+'</select>';
 
-      // type select
-      var typeSel = '<select style="'+selStyle+'" onchange="bdSetType(\''+e.id+'\',this.value)">'
-        +'<option value="business"'+(typeVal==='business'?' selected':'')+'>Business</option>'
-        +'<option value="personal"'+(typeVal==='personal'?' selected':'')+'>Personal</option>'
-        +'</select>';
+      // contenteditable type cell — click to edit, blur saves
+      var typeCell = '<span contenteditable="true" spellcheck="false" style="'+cellStyle+'" '
+        +'onblur="bdTypeBlur(this,\''+e.id+'\')" '
+        +'onkeydown="if(event.key===\'Enter\'){event.preventDefault();this.blur();}" '
+        +'>'+typeLabel+'</span>';
 
       var inOutBadge = isIn
         ? '<span style="background:rgba(74,222,128,.12);color:#4ADE80;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">IN</span>'
@@ -1952,7 +1986,7 @@
         +'<td style="padding:9px 14px">'+inOutBadge+'</td>'
         +'<td style="padding:9px 14px;color:var(--faint);white-space:nowrap;font-size:12px">'+(e.account||'')+'</td>'
         +'<td style="padding:9px 14px;text-align:right;white-space:nowrap;color:'+amtColor+';font-weight:600">'+amtStr+'</td>'
-        +'<td style="padding:9px 14px;white-space:nowrap">'+typeSel+'</td>'
+        +'<td style="padding:9px 14px;white-space:nowrap">'+typeCell+'</td>'
         +'</tr>';
     });
 
