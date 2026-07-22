@@ -863,6 +863,9 @@
 
     firstPaint=false;
     updateHeroPeek();
+    // keep breakdown in sync whenever data changes
+    var bdPage=document.getElementById('page-breakdown');
+    if(bdPage && bdPage.classList.contains('active')) renderBreakdown();
   }
 
   function renderBalance(total){
