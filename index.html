@@ -143,6 +143,10 @@
   .raw-type-cell:hover div{opacity:.85;}
   .raw-type-cell:focus{box-shadow:inset 0 0 0 2px rgba(99,102,241,.6);}
   .raw-type-cell:focus div{opacity:1;}
+  .raw-type-cell.rtc-selected{box-shadow:inset 0 0 0 2px #3B82F6;}
+  .raw-type-cell.rtc-fill-preview{box-shadow:inset 0 0 0 2px rgba(59,130,246,.45);background:rgba(59,130,246,.06);}
+  .rtc-handle{position:absolute;bottom:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:#3B82F6;cursor:crosshair;z-index:10;display:none;border:2px solid var(--bg)}
+  .raw-type-cell.rtc-selected .rtc-handle{display:block;}
   .navbtn:hover{color:var(--text)}
   .page{display:none}
   .page.active{display:block}
@@ -1904,6 +1908,79 @@
     bdSavePrefs();
   };
 
+  // --- type cell selection + fill handle ---
+  var _rtcSelected = null; // currently selected td
+
+  function rtcSelect(td){
+    if(_rtcSelected && _rtcSelected!==td) _rtcSelected.classList.remove('rtc-selected');
+    _rtcSelected = td;
+    if(td) td.classList.add('rtc-selected');
+  }
+
+  // click: select cell (first click), toggle (second click on same cell)
+  window.bdTypeCellClick = function(ev, eid, td){
+    if(ev.target.classList.contains('rtc-handle')) return; // handle has own handler
+    if(_rtcSelected===td){
+      bdToggleType(eid,td);
+    } else {
+      rtcSelect(td);
+      td.focus();
+    }
+  };
+
+  // deselect when clicking outside type cells
+  document.addEventListener('mousedown', function(ev){
+    if(!ev.target.closest('.raw-type-cell')) rtcSelect(null);
+  });
+
+  // fill handle drag
+  var _fillDrag = null; // {eid, val, anchorIdx, cells}
+
+  window.bdFillStart = function(ev, eid){
+    ev.preventDefault();
+    ev.stopPropagation();
+    var cells = Array.prototype.slice.call(document.querySelectorAll('.raw-type-cell'));
+    var anchorIdx = cells.findIndex(function(c){ return c.dataset.eid===eid; });
+    if(anchorIdx<0) return;
+    var val = bdTypeOverrides[eid] || 'business';
+    _fillDrag = {eid:eid, val:val, anchorIdx:anchorIdx, cells:cells, lastRange:[]};
+    document.addEventListener('mousemove', _fillMove);
+    document.addEventListener('mouseup', _fillEnd);
+  };
+
+  function _fillMove(ev){
+    if(!_fillDrag) return;
+    var cells = _fillDrag.cells;
+    // find which cell the cursor is over
+    var target = document.elementFromPoint(ev.clientX, ev.clientY);
+    var overTd = target && target.closest('.raw-type-cell');
+    var overIdx = overTd ? cells.indexOf(overTd) : _fillDrag.anchorIdx;
+    // clear old preview
+    _fillDrag.lastRange.forEach(function(c){ c.classList.remove('rtc-fill-preview'); });
+    // compute range
+    var from = Math.min(_fillDrag.anchorIdx, overIdx);
+    var to   = Math.max(_fillDrag.anchorIdx, overIdx);
+    var range = cells.slice(from, to+1).filter(function(c){ return c!==cells[_fillDrag.anchorIdx]; });
+    range.forEach(function(c){ c.classList.add('rtc-fill-preview'); });
+    _fillDrag.lastRange = range;
+    _fillDrag.overIdx = overIdx;
+  }
+
+  function _fillEnd(){
+    if(!_fillDrag) return;
+    document.removeEventListener('mousemove', _fillMove);
+    document.removeEventListener('mouseup', _fillEnd);
+    var cells = _fillDrag.cells;
+    var from = Math.min(_fillDrag.anchorIdx, _fillDrag.overIdx||_fillDrag.anchorIdx);
+    var to   = Math.max(_fillDrag.anchorIdx, _fillDrag.overIdx||_fillDrag.anchorIdx);
+    cells.slice(from, to+1).forEach(function(c){
+      c.classList.remove('rtc-fill-preview');
+      var ceid = c.dataset.eid;
+      if(ceid) bdApplyType(ceid, c, _fillDrag.val);
+    });
+    _fillDrag = null;
+  }
+
   window.bdTypeCellKey = function(ev, eid, td){
     var k = ev.key;
     if(k==='ArrowDown'||k==='ArrowUp'){
@@ -2007,8 +2084,9 @@
         +'<td style="padding:9px 14px">'+inOutBadge+'</td>'
         +'<td style="padding:9px 14px;color:var(--faint);white-space:nowrap;font-size:12px">'+(e.account||'')+'</td>'
         +'<td style="padding:9px 14px;text-align:right;white-space:nowrap;color:'+amtColor+';font-weight:600">'+amtStr+'</td>'
-        +'<td tabindex="0" onclick="bdToggleType(\''+e.id+'\',this)" onkeydown="bdTypeCellKey(event,\''+e.id+'\',this)" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-type-cell">'
+        +'<td tabindex="0" data-eid="'+e.id+'" onclick="bdTypeCellClick(event,\''+e.id+'\',this)" onkeydown="bdTypeCellKey(event,\''+e.id+'\',this)" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-type-cell">'
         +'<div style="margin:5px 10px;padding:4px 12px;border-radius:6px;background:'+typeBg+';color:'+typeClr+';font-size:12px;font-weight:600;letter-spacing:.02em;text-align:center;user-select:text">'+typeLabel+'</div>'
+        +'<div class="rtc-handle" onmousedown="bdFillStart(event,\''+e.id+'\')"></div>'
         +'</td>'
         +'</tr>';
     });
