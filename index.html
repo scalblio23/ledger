@@ -1659,20 +1659,24 @@
   var bdSortedOrder = null;
   // per entry-id category override
   var bdOverrides = {};
+  // per entry-id type override: 'business' | 'personal'
+  var bdTypeOverrides = {};
   // user-created custom categories
   var bdCustomCats = [];
   var BD_EXTRA_COLORS = ["#E879F9","#38BDF8","#FB7185","#A3E635","#FBBF24","#34D399"];
+  // current breakdown view: 'overview' | 'raw'
+  var bdView = 'overview';
 
   function bdPrefsKey(){ return "ledger_bd_prefs_"+(currentUser||""); }
   function bdSavePrefs(){
-    try{ localStorage.setItem(bdPrefsKey(), JSON.stringify({overrides:bdOverrides,customCats:bdCustomCats})); }catch(e){}
+    try{ localStorage.setItem(bdPrefsKey(), JSON.stringify({overrides:bdOverrides,customCats:bdCustomCats,typeOverrides:bdTypeOverrides})); }catch(e){}
   }
   function bdLoadPrefs(){
     try{
       var raw=localStorage.getItem(bdPrefsKey());
-      if(raw){ var p=JSON.parse(raw); bdOverrides=p.overrides||{}; bdCustomCats=p.customCats||[]; }
-      else { bdOverrides={}; bdCustomCats=[]; }
-    }catch(e){ bdOverrides={}; bdCustomCats=[]; }
+      if(raw){ var p=JSON.parse(raw); bdOverrides=p.overrides||{}; bdCustomCats=p.customCats||[]; bdTypeOverrides=p.typeOverrides||{}; }
+      else { bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; }
+    }catch(e){ bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; }
   }
 
   function bdAllCatNames(){
@@ -1742,7 +1746,17 @@
     var allCatNames = bdAllCatNames();
 
     var html = '<div style="padding:4px 0 16px">'
-      +'<div style="font-size:13px;color:var(--faint);margin-bottom:18px">Total spend categorised across all accounts · AUD</div>';
+      +'<div style="display:flex;gap:8px;margin-bottom:20px">'
+      +'<button onclick="bdView=\'overview\';renderBreakdown();" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='overview'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Overview</button>'
+      +'<button onclick="bdView=\'raw\';renderBreakdown();" style="padding:7px 18px;border-radius:20px;border:none;cursor:pointer;font-size:13px;font-weight:600;'+(bdView==='raw'?'background:#6366F1;color:#fff;':'background:var(--card);color:var(--text);')+'transition:all .15s">Raw</button>'
+      +'</div>';
+
+    if(bdView==='raw'){
+      document.getElementById('breakdownContent').innerHTML=html+renderBreakdownRaw(allCatNames)+'</div>';
+      return;
+    }
+
+    html += '<div style="font-size:13px;color:var(--faint);margin-bottom:18px">Total spend categorised across all accounts · AUD</div>';
 
     // summary cards
     html += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">';
@@ -1878,6 +1892,73 @@
     renderBreakdown();
   };
 
+  window.bdSetType = function(eid, val){
+    bdTypeOverrides[eid]=val;
+    bdSavePrefs();
+  };
+
+  function renderBreakdownRaw(allCatNames){
+    var entries = state.entries.slice().sort(function(a,b){ return (b.date||'').localeCompare(a.date||''); });
+    var h = '<div style="overflow-x:auto;border-radius:16px;background:var(--card);box-shadow:0 4px 20px rgba(0,0,0,.25)">'
+      +'<table style="width:100%;border-collapse:collapse;font-size:13px">'
+      +'<thead><tr style="border-bottom:1px solid rgba(255,255,255,.08)">'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600;white-space:nowrap">Date</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Transaction</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600;white-space:nowrap">Category</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">In/Out</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Account</th>'
+      +'<th style="padding:12px 14px;text-align:right;color:var(--faint);font-weight:600">Amount</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Type</th>'
+      +'</tr></thead><tbody>';
+
+    var selStyle = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text);font-size:12px;padding:4px 8px;cursor:pointer;outline:none;max-width:140px';
+
+    entries.forEach(function(e,i){
+      var isEven = i%2===0;
+      var bg = isEven ? 'transparent' : 'rgba(255,255,255,.02)';
+      var isOut = e.type==='out';
+      var isIn = e.type==='in';
+      var amtColor = isIn ? '#4ADE80' : (isTransfer(e) ? 'var(--faint)' : 'var(--text)');
+      var amtSign = isIn ? '+' : (isOut ? '−' : '');
+      var amtStr = amtSign+'$'+money(Math.abs(e.amount||0)).d+'.'+money(Math.abs(e.amount||0)).c;
+      var cat = bdEffectiveCat(e);
+      var catColor = bdColorFor(cat);
+      var typeVal = bdTypeOverrides[e.id] || 'business';
+
+      // category select
+      var catOpts = allCatNames.map(function(n){ return '<option value="'+n+'"'+(n===cat?' selected':'')+'>'+n+'</option>'; }).join('');
+      catOpts += '<option value="__new__">+ New…</option>';
+      var catSel = '<select style="'+selStyle+'" onchange="bdMoveTx(\''+e.id+'\',this.value,this)">'+catOpts+'</select>';
+
+      // type select
+      var typeSel = '<select style="'+selStyle+'" onchange="bdSetType(\''+e.id+'\',this.value)">'
+        +'<option value="business"'+(typeVal==='business'?' selected':'')+'>Business</option>'
+        +'<option value="personal"'+(typeVal==='personal'?' selected':'')+'>Personal</option>'
+        +'</select>';
+
+      var inOutBadge = isIn
+        ? '<span style="background:rgba(74,222,128,.12);color:#4ADE80;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">IN</span>'
+        : isTransfer(e)
+          ? '<span style="background:rgba(156,163,175,.12);color:var(--faint);border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">XFER</span>'
+          : '<span style="background:rgba(248,113,113,.12);color:#F87171;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">OUT</span>';
+
+      var catDot = '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+catColor+';margin-right:6px;vertical-align:middle;flex-shrink:0"></span>';
+
+      h += '<tr style="background:'+bg+';border-bottom:1px solid rgba(255,255,255,.04)">'
+        +'<td style="padding:9px 14px;white-space:nowrap;color:var(--faint);font-size:12px">'+(e.date||'')+'</td>'
+        +'<td style="padding:9px 14px;max-width:220px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px" title="'+(e.title||'').replace(/"/g,"&quot;")+'">'+((e.title||'').replace(/</g,'&lt;'))+'</div></td>'
+        +'<td style="padding:9px 14px;white-space:nowrap">'+catDot+catSel+'</td>'
+        +'<td style="padding:9px 14px">'+inOutBadge+'</td>'
+        +'<td style="padding:9px 14px;color:var(--faint);white-space:nowrap;font-size:12px">'+(e.account||'')+'</td>'
+        +'<td style="padding:9px 14px;text-align:right;white-space:nowrap;color:'+amtColor+';font-weight:600">'+amtStr+'</td>'
+        +'<td style="padding:9px 14px;white-space:nowrap">'+typeSel+'</td>'
+        +'</tr>';
+    });
+
+    h += '</tbody></table></div>';
+    return h;
+  }
+
   window.bdToggle = function(safecat){
     var allCats = bdAllCatNames();
     var cat = allCats.find(function(c){ return c.replace(/[^a-zA-Z0-9]/g,"_")===safecat; });
@@ -1976,7 +2057,7 @@
   document.getElementById("logoutBtn").addEventListener("click",function(){
     clearSession();
     currentUser=null;
-    bdOverrides={}; bdCustomCats=[]; bdSortedOrder=null;
+    bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; bdSortedOrder=null; bdView='overview';
     state=JSON.parse(JSON.stringify(DEFAULT));
     document.getElementById("mainWrap").style.display="none";
     document.getElementById("authScreen").classList.remove("hidden");
