@@ -2141,6 +2141,7 @@
     var clr = val==='personal' ? '#C4B5FD' : '#818CF8';
     var div = td ? td.querySelector('div') : null;
     if(div){ div.textContent=label; div.style.background=bg; div.style.color=clr; }
+    if(bdView==='pl'||bdView==='business'||bdView==='personal') renderBreakdown();
   };
 
   window.bdToggleType = function(eid, td){
@@ -2164,6 +2165,7 @@
     var m=COST_META[val]||COST_META.na;
     var div=td?td.querySelector('div'):null;
     if(div){div.textContent=m.label;div.style.background=m.bg;div.style.color=m.clr;}
+    if(bdView==='pl') renderBreakdown();
   };
 
   window.bdToggleCost = function(eid, td){
@@ -2222,8 +2224,9 @@
     cells.slice(from,to+1).forEach(function(c){
       c.classList.remove('rtc-fill-preview');
       var ceid=c.dataset.eid;
-      if(ceid) bdApplyCost(ceid,c,_fillDrag.val);
+      if(ceid) bdApplyCost(ceid,c,_fillDrag.val,true);
     });
+    if(from!==to) bdPushHistory({field:'cost',eid:_fillDrag.eid,prev:null,next:_fillDrag.val});
     _fillDrag=null;
     bdUpdateUndoUI();
   }
