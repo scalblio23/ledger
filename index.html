@@ -1781,6 +1781,44 @@
     html += '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px"><div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em">Transactions</div><div style="font-size:22px;font-weight:700;margin-top:4px">'+outCount+'</div></div>';
     html += '</div>';
 
+    // business vs personal comparison
+    var biz=0, bizCount=0, per=0, perCount=0, uncat=0, uncatCount=0;
+    state.entries.forEach(function(e){
+      if(e.type!=='out'||isTransfer(e)) return;
+      var t=bdTypeOverrides[e.id]||'business';
+      if(t==='personal'){ per+=(e.amount||0); perCount++; }
+      else { biz+=(e.amount||0); bizCount++; }
+    });
+    var bpTotal=biz+per;
+    var bizPct=bpTotal>0?biz/bpTotal*100:50;
+    var perPct=bpTotal>0?per/bpTotal*100:50;
+    html += '<div style="background:var(--card);border-radius:16px;padding:20px 22px;margin-bottom:20px">';
+    html += '<div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Business vs Personal</div>';
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px">';
+    html += '<div style="flex:1;min-width:120px">'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'
+      +'<div style="width:9px;height:9px;border-radius:50%;background:#818CF8"></div>'
+      +'<span style="font-size:12px;color:var(--faint)">Business</span>'
+      +'</div>'
+      +'<div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums">'+fmtAmt(biz)+'</div>'
+      +'<div style="font-size:12px;color:var(--faint);margin-top:2px">'+bizCount+' transactions · '+bizPct.toFixed(1)+'%</div>'
+      +'</div>';
+    html += '<div style="flex:1;min-width:120px">'
+      +'<div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">'
+      +'<div style="width:9px;height:9px;border-radius:50%;background:#C4B5FD"></div>'
+      +'<span style="font-size:12px;color:var(--faint)">Personal</span>'
+      +'</div>'
+      +'<div style="font-size:22px;font-weight:700;font-variant-numeric:tabular-nums">'+fmtAmt(per)+'</div>'
+      +'<div style="font-size:12px;color:var(--faint);margin-top:2px">'+perCount+' transactions · '+perPct.toFixed(1)+'%</div>'
+      +'</div>';
+    html += '</div>';
+    // stacked bar
+    html += '<div style="height:10px;border-radius:999px;overflow:hidden;display:flex;gap:2px">'
+      +'<div style="flex:'+bizPct+';background:#6366F1;border-radius:999px 0 0 999px;min-width:'+(bizPct>0?'4px':'0')+'"></div>'
+      +'<div style="flex:'+perPct+';background:#A78BFA;border-radius:0 999px 999px 0;min-width:'+(perPct>0?'4px':'0')+'"></div>'
+      +'</div>';
+    html += '</div>';
+
     // donut chart + legend — glass card
     html += '<div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:24px;margin-bottom:20px;display:flex;gap:28px;align-items:center;flex-wrap:wrap;box-shadow:0 8px 32px rgba(0,0,0,.3)">';
     html += bdDonut(sorted,totals,catColors,totalSpend);
