@@ -449,6 +449,7 @@
       </div>
     </div>
     <div class="grid" id="grid"></div>
+    <div id="balanceWrap"></div>
 
     <div class="sec-head fade" style="animation-delay:.48s">
       <h2>Activity</h2>
@@ -747,6 +748,44 @@
     ghost.innerHTML='<span style="font-size:18px">+</span> Add account';
     ghost.addEventListener("click",function(){ openAccount(null); });
     grid.appendChild(ghost);
+
+    // balance button — show if any account is negative and another is positive
+    var bwrap=document.getElementById("balanceWrap");
+    bwrap.innerHTML="";
+    var negAccts=state.accounts.filter(function(a){return (+a.balance||0)<0;});
+    var posAccts=state.accounts.filter(function(a){return (+a.balance||0)>0;});
+    if(negAccts.length>0 && posAccts.length>0){
+      var btn=document.createElement("button");
+      btn.textContent="Balance accounts";
+      btn.style.cssText="display:block;width:100%;margin:10px 0 4px;padding:13px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--text);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.01em;transition:background .15s";
+      btn.onmouseenter=function(){ this.style.background="rgba(255,255,255,.11)"; };
+      btn.onmouseleave=function(){ this.style.background="rgba(255,255,255,.07)"; };
+      btn.addEventListener("click",function(){
+        var today=new Date().toISOString().slice(0,10);
+        negAccts.forEach(function(neg){
+          var deficit=Math.abs(+neg.balance||0);
+          if(deficit<=0) return;
+          // draw from positive accounts in order until deficit covered
+          posAccts.forEach(function(pos){
+            if(deficit<=0) return;
+            var available=+pos.balance||0;
+            if(available<=0) return;
+            var transfer=Math.min(deficit, available);
+            transfer=Math.round(transfer*100)/100;
+            // deduct from pos
+            pos.balance=Math.round(((+pos.balance)-transfer)*100)/100;
+            state.entries.unshift({id:uid(),type:"out",title:"Transfer to "+neg.name,account:pos.name,date:today,amount:transfer,origUsd:null,usdRate:null});
+            // add to neg
+            neg.balance=Math.round(((+neg.balance)+transfer)*100)/100;
+            state.entries.unshift({id:uid(),type:"in",title:"Transfer from "+pos.name,account:neg.name,date:today,amount:transfer,origUsd:null,usdRate:null});
+            deficit-=transfer;
+          });
+        });
+        persist();
+        render();
+      });
+      bwrap.appendChild(btn);
+    }
 
     // activity log
     var log=document.getElementById("log");
