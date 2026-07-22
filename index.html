@@ -2305,29 +2305,12 @@
     h += tile('Overhead',fmt(totalOverhead),'Running costs','#34D399');
     h += '</div>';
 
-    // current month profit, then derive weekly/daily from it
     var now = new Date();
-    var todayStr = now.toISOString().slice(0,10);
-    var monthStartStr = todayStr.slice(0,7)+'-01';
-    var daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-    var dayOfMonth  = now.getDate();
-    var pctMonth    = dayOfMonth / daysInMonth;
-
-    var profitMonth = 0;
-    state.entries.forEach(function(e){
-      if(!e.date || isBdTransfer(e)) return;
-      var sign = e.type==='in' ? 1 : e.type==='out' ? -1 : 0;
-      if(!sign) return;
-      if(e.date >= monthStartStr) profitMonth += (e.amount||0) * sign;
-    });
-
-    var profitWeekly = (profitMonth / 4.3) * pctMonth;
-    var profitDaily  = (profitMonth / 30)  * pctMonth;
-
-    function periodClr(v){ return v>=0?'#4ADE80':'#F87171'; }
-
-    var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var mName = monthNames[now.getMonth()];
+    var dayOfMonth = now.getDate();
+    var pctMonth   = dayOfMonth / 30;
+    var profitWeekly = (netProfit / 4.3) * pctMonth;
+    var profitDaily  = profitWeekly / 7;
+    var npClr2 = netProfit>=0?'#4ADE80':'#F87171';
 
     function atile(label, val, sub, color){
       return '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px">'
@@ -2338,9 +2321,9 @@
     }
 
     h += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
-    h += atile('Monthly', fmt(profitMonth),  mName+' 1–'+dayOfMonth+' ('+Math.round(pctMonth*100)+'% of month)', periodClr(profitMonth));
-    h += atile('Weekly',  fmt(profitWeekly), 'Monthly ÷ 4.3 × '+Math.round(pctMonth*100)+'%', periodClr(profitWeekly));
-    h += atile('Daily',   fmt(profitDaily),  'Monthly ÷ 30 × '+Math.round(pctMonth*100)+'%',  periodClr(profitDaily));
+    h += atile('Monthly', fmt(netProfit),    'Actual net profit', npClr2);
+    h += atile('Weekly',  fmt(profitWeekly), 'Monthly ÷ 4.3 × '+Math.round(pctMonth*100)+'%', npClr2);
+    h += atile('Daily',   fmt(profitDaily),  'Weekly ÷ 7', npClr2);
     h += '</div>';
 
     return h;
