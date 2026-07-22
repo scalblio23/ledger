@@ -73,7 +73,9 @@
   .hero-net-flows{display:flex;justify-content:center;gap:14px;margin-top:20px;flex-wrap:wrap}
 
   .flows{display:flex;justify-content:center;gap:14px;margin-top:34px;flex-wrap:wrap}
-  .flow{display:flex;align-items:center;gap:11px;padding:13px 20px;border-radius:16px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 36px rgba(0,0,0,.5);backdrop-filter:blur(52px) saturate(230%) brightness(0.85);-webkit-backdrop-filter:blur(52px) saturate(230%) brightness(0.85)}
+  .flow{display:flex;align-items:center;gap:11px;padding:13px 20px;border-radius:16px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 14px 36px rgba(0,0,0,.5);backdrop-filter:blur(52px) saturate(230%) brightness(0.85);-webkit-backdrop-filter:blur(52px) saturate(230%) brightness(0.85);cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .flow.active-filter.in{border-color:rgba(74,222,128,.5);box-shadow:inset 0 1px 0 var(--sheen),0 14px 36px rgba(0,0,0,.5),0 0 0 2px rgba(74,222,128,.2)}
+  .flow.active-filter.out{border-color:rgba(248,113,113,.5);box-shadow:inset 0 1px 0 var(--sheen),0 14px 36px rgba(0,0,0,.5),0 0 0 2px rgba(248,113,113,.2)}
   .flow .ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:1px solid var(--stroke)}
   .flow.in .ic{background:rgba(74,222,128,.10)}
   .flow.out .ic{background:rgba(248,113,113,.10)}
@@ -559,6 +561,7 @@
   var state = JSON.parse(JSON.stringify(DEFAULT)), editing = false, firstPaint = true;
   var selMonth = null;
   var cfCompact = false;
+  var typeFilter = null; // null | 'in' | 'out'
 
   // ---- storage ----
   var store = {
@@ -694,6 +697,19 @@
     state.entries.forEach(function(e){ if(e.type==="in") inSum+=(+e.amount||0); else outSum+=(+e.amount||0); });
     document.getElementById("flowIn").textContent="$"+inSum.toLocaleString("en-AU",{maximumFractionDigits:0});
     document.getElementById("flowOut").textContent="$"+outSum.toLocaleString("en-AU",{maximumFractionDigits:0});
+    // type filter pills
+    var flowInEl=document.getElementById("flowIn").closest(".flow");
+    var flowOutEl=document.getElementById("flowOut").closest(".flow");
+    function syncFlowActive(){
+      flowInEl.classList.toggle("active-filter",typeFilter==="in");
+      flowOutEl.classList.toggle("active-filter",typeFilter==="out");
+    }
+    syncFlowActive();
+    if(!flowInEl._tfWired){
+      flowInEl._tfWired=true;
+      flowInEl.addEventListener("click",function(){ typeFilter=typeFilter==="in"?null:"in"; syncFlowActive(); var l=document.getElementById("log"); if(l) render(); });
+      flowOutEl.addEventListener("click",function(){ typeFilter=typeFilter==="out"?null:"out"; syncFlowActive(); var l=document.getElementById("log"); if(l) render(); });
+    }
     var net=inSum-outSum, nm=money(net);
     document.getElementById("heroChange").innerHTML=
       '<b style="color:'+(net<0?"var(--neg)":"var(--pos)")+'">'+(net<0?"▼":"▲")+' $'+Math.abs(net).toLocaleString("en-AU",{maximumFractionDigits:0})+'</b><span class="dot">·</span>net this period';
@@ -737,6 +753,7 @@
       log.innerHTML='<div class="empty">No transactions yet — press C or tap + Add above.</div>';
     } else {
       var filtered=state.entries.filter(function(e){
+        if(typeFilter && e.type!==typeFilter) return false;
         if(!searchQ) return true;
         return (e.title||"").toLowerCase().indexOf(searchQ)>=0||
                (e.account||"").toLowerCase().indexOf(searchQ)>=0||
