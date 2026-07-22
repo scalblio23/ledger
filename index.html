@@ -140,13 +140,15 @@
   .nav{display:flex;gap:4px;width:max-content;margin:0 auto 10px;padding:4px;border-radius:100px;background:linear-gradient(150deg,var(--glass-hi),var(--glass-lo));border:1px solid var(--stroke);box-shadow:inset 0 1px 0 var(--sheen),0 12px 34px rgba(0,0,0,.5);backdrop-filter:blur(40px) saturate(200%) brightness(0.85);-webkit-backdrop-filter:blur(40px) saturate(200%) brightness(0.85)}
   .navbtn{padding:9px 22px;border-radius:100px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:14px;font-weight:500;cursor:pointer;transition:color .2s,background .2s}
   .navbtn.active{background:rgba(255,255,255,.10);color:var(--text);box-shadow:inset 0 1px 0 var(--sheen)}
-  .raw-type-cell:hover div{opacity:.85;}
+  .raw-type-cell:hover div,.raw-cost-cell:hover div{opacity:.85;}
   .raw-type-cell:focus{box-shadow:inset 0 0 0 2px rgba(99,102,241,.6);}
   .raw-type-cell:focus div{opacity:1;}
-  .raw-type-cell.rtc-selected{box-shadow:inset 0 0 0 2px #3B82F6;}
-  .raw-type-cell.rtc-fill-preview{box-shadow:inset 0 0 0 2px rgba(59,130,246,.45);background:rgba(59,130,246,.06);}
+  .raw-cost-cell:focus{box-shadow:inset 0 0 0 2px rgba(59,130,246,.6);}
+  .raw-cost-cell:focus div{opacity:1;}
+  .raw-type-cell.rtc-selected,.raw-cost-cell.rtc-selected{box-shadow:inset 0 0 0 2px #3B82F6;}
+  .raw-type-cell.rtc-fill-preview,.raw-cost-cell.rtc-fill-preview{box-shadow:inset 0 0 0 2px rgba(59,130,246,.45);background:rgba(59,130,246,.06);}
   .rtc-handle{position:absolute;bottom:-4px;right:-4px;width:8px;height:8px;border-radius:50%;background:#3B82F6;cursor:crosshair;z-index:10;display:none;border:2px solid var(--bg)}
-  .raw-type-cell.rtc-selected .rtc-handle{display:block;}
+  .raw-type-cell.rtc-selected .rtc-handle,.raw-cost-cell.rtc-selected .rtc-handle{display:block;}
   .navbtn:hover{color:var(--text)}
   .page{display:none}
   .page.active{display:block}
@@ -1670,6 +1672,8 @@
   var bdOverrides = {};
   // per entry-id type override: 'business' | 'personal'
   var bdTypeOverrides = {};
+  // per entry-id cost override: 'cogs' | 'overhead' | 'na'
+  var bdCostOverrides = {};
   // user-created custom categories
   var bdCustomCats = [];
   var BD_EXTRA_COLORS = ["#E879F9","#38BDF8","#FB7185","#A3E635","#FBBF24","#34D399"];
@@ -1679,14 +1683,14 @@
 
   function bdPrefsKey(){ return "ledger_bd_prefs_"+(currentUser||""); }
   function bdSavePrefs(){
-    try{ localStorage.setItem(bdPrefsKey(), JSON.stringify({overrides:bdOverrides,customCats:bdCustomCats,typeOverrides:bdTypeOverrides})); }catch(e){}
+    try{ localStorage.setItem(bdPrefsKey(), JSON.stringify({overrides:bdOverrides,customCats:bdCustomCats,typeOverrides:bdTypeOverrides,costOverrides:bdCostOverrides})); }catch(e){}
   }
   function bdLoadPrefs(){
     try{
       var raw=localStorage.getItem(bdPrefsKey());
-      if(raw){ var p=JSON.parse(raw); bdOverrides=p.overrides||{}; bdCustomCats=p.customCats||[]; bdTypeOverrides=p.typeOverrides||{}; }
-      else { bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; }
-    }catch(e){ bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; }
+      if(raw){ var p=JSON.parse(raw); bdOverrides=p.overrides||{}; bdCustomCats=p.customCats||[]; bdTypeOverrides=p.typeOverrides||{}; bdCostOverrides=p.costOverrides||{}; }
+      else { bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; bdCostOverrides={}; }
+    }catch(e){ bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; bdCostOverrides={}; }
   }
 
   function bdAllCatNames(){
@@ -2003,6 +2007,12 @@
       bdTypeOverrides[e.eid]=val;
       bdSavePrefs();
       if(td){ var label=val.charAt(0).toUpperCase()+val.slice(1); var bg=val==='personal'?'rgba(168,139,250,.15)':'rgba(99,102,241,.15)'; var clr=val==='personal'?'#C4B5FD':'#818CF8'; var div=td.querySelector('div'); if(div){div.textContent=label;div.style.background=bg;div.style.color=clr;} }
+    } else if(e.field==='cost'){
+      var tds2=document.querySelectorAll('.raw-cost-cell');
+      var td2=null; for(var j=0;j<tds2.length;j++){if(tds2[j].dataset.eid===e.eid){td2=tds2[j];break;}}
+      bdCostOverrides[e.eid]=val; bdSavePrefs();
+      var m=COST_META[val]||COST_META.na;
+      if(td2){var div2=td2.querySelector('div');if(div2){div2.textContent=m.label;div2.style.background=m.bg;div2.style.color=m.clr;}}
     } else if(e.field==='category'){
       bdOverrides[e.eid]=val;
       bdSavePrefs();
@@ -2124,6 +2134,86 @@
     var cur = bdTypeOverrides[eid] || 'business';
     bdApplyType(eid, td, cur==='business' ? 'personal' : 'business');
   };
+
+  // --- cost cell (COGS / Overhead / N/A) ---
+  var COST_CYCLE = ['na','cogs','overhead'];
+  var COST_META = {
+    cogs:     {label:'COGS',     bg:'rgba(251,191,36,.15)',  clr:'#FBBF24'},
+    overhead: {label:'Overhead', bg:'rgba(52,211,153,.15)',  clr:'#34D399'},
+    na:       {label:'N/A',      bg:'rgba(156,163,175,.10)', clr:'#6B7280'}
+  };
+
+  window.bdApplyCost = function(eid, td, val, skipHistory){
+    var prev = bdCostOverrides[eid]||'na';
+    if(!skipHistory && prev!==val) bdPushHistory({field:'cost',eid:eid,prev:prev,next:val});
+    bdCostOverrides[eid]=val;
+    bdSavePrefs();
+    var m=COST_META[val]||COST_META.na;
+    var div=td?td.querySelector('div'):null;
+    if(div){div.textContent=m.label;div.style.background=m.bg;div.style.color=m.clr;}
+  };
+
+  window.bdToggleCost = function(eid, td){
+    var cur=bdCostOverrides[eid]||'na';
+    var idx=(COST_CYCLE.indexOf(cur)+1)%COST_CYCLE.length;
+    bdApplyCost(eid,td,COST_CYCLE[idx]);
+  };
+
+  window.bdCostCellClick = function(ev, eid, td){
+    if(ev.target.classList.contains('rtc-handle')) return;
+    var sel=document.querySelector('.raw-cost-cell.rtc-selected');
+    if(sel===td){ bdToggleCost(eid,td); }
+    else {
+      if(sel) sel.classList.remove('rtc-selected');
+      td.classList.add('rtc-selected');
+      td.focus();
+    }
+  };
+
+  window.bdCostCellKey = function(ev, eid, td){
+    var k=ev.key;
+    if(k==='ArrowDown'||k==='ArrowUp'){
+      ev.preventDefault();
+      var cells=Array.prototype.slice.call(document.querySelectorAll('.raw-cost-cell'));
+      var idx=cells.indexOf(td);
+      var next=cells[idx+(k==='ArrowDown'?1:-1)];
+      if(next) next.focus();
+      return;
+    }
+    if(k==='c'||k==='C'){ev.preventDefault();bdApplyCost(eid,td,'cogs');return;}
+    if(k==='o'||k==='O'){ev.preventDefault();bdApplyCost(eid,td,'overhead');return;}
+    if(k==='n'||k==='N'){ev.preventDefault();bdApplyCost(eid,td,'na');return;}
+    if(k===' '||k==='Enter'){ev.preventDefault();bdToggleCost(eid,td);return;}
+  };
+
+  // extend fill drag to work for cost cells too
+  window.bdCostFillStart = function(ev, eid){
+    ev.preventDefault();
+    ev.stopPropagation();
+    var cells=Array.prototype.slice.call(document.querySelectorAll('.raw-cost-cell'));
+    var anchorIdx=cells.findIndex(function(c){return c.dataset.eid===eid;});
+    if(anchorIdx<0) return;
+    var val=bdCostOverrides[eid]||'na';
+    _fillDrag={eid:eid,val:val,anchorIdx:anchorIdx,cells:cells,lastRange:[],isCost:true};
+    document.addEventListener('mousemove',_fillMove);
+    document.addEventListener('mouseup',_fillEndCost);
+  };
+
+  function _fillEndCost(){
+    if(!_fillDrag) return;
+    document.removeEventListener('mousemove',_fillMove);
+    document.removeEventListener('mouseup',_fillEndCost);
+    var cells=_fillDrag.cells;
+    var from=Math.min(_fillDrag.anchorIdx,_fillDrag.overIdx||_fillDrag.anchorIdx);
+    var to=Math.max(_fillDrag.anchorIdx,_fillDrag.overIdx||_fillDrag.anchorIdx);
+    cells.slice(from,to+1).forEach(function(c){
+      c.classList.remove('rtc-fill-preview');
+      var ceid=c.dataset.eid;
+      if(ceid) bdApplyCost(ceid,c,_fillDrag.val);
+    });
+    _fillDrag=null;
+    bdUpdateUndoUI();
+  }
 
   window.bdRawSortBy = function(col){
     if(bdRawSort.col===col){ bdRawSort.dir*=-1; } else { bdRawSort={col:col,dir:1}; }
@@ -2285,6 +2375,7 @@
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Account</th>'
       +'<th style="padding:12px 14px;text-align:right;color:var(--faint);font-weight:600">Amount</th>'
       +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Type</th>'
+      +'<th style="padding:12px 14px;text-align:left;color:var(--faint);font-weight:600">Cost</th>'
       +'</tr></thead><tbody>';
 
     var selStyle = 'background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;color:var(--text);font-size:12px;padding:4px 8px;cursor:pointer;outline:none;max-width:140px';
@@ -2308,6 +2399,8 @@
 
       var typeBg = typeVal==='personal' ? 'rgba(168,139,250,.15)' : 'rgba(99,102,241,.15)';
       var typeClr = typeVal==='personal' ? '#C4B5FD' : '#818CF8';
+      var costVal = bdCostOverrides[e.id]||'na';
+      var costM = COST_META[costVal]||COST_META.na;
 
       var inOutBadge = isIn
         ? '<span style="background:rgba(74,222,128,.12);color:#4ADE80;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600">IN</span>'
@@ -2327,6 +2420,10 @@
         +'<td tabindex="0" data-eid="'+e.id+'" onclick="bdTypeCellClick(event,\''+e.id+'\',this)" onkeydown="bdTypeCellKey(event,\''+e.id+'\',this)" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-type-cell">'
         +'<div style="margin:5px 10px;padding:4px 12px;border-radius:6px;background:'+typeBg+';color:'+typeClr+';font-size:12px;font-weight:600;letter-spacing:.02em;text-align:center;user-select:text">'+typeLabel+'</div>'
         +'<div class="rtc-handle" onmousedown="bdFillStart(event,\''+e.id+'\')"></div>'
+        +'</td>'
+        +'<td tabindex="0" data-eid="'+e.id+'" onclick="bdCostCellClick(event,\''+e.id+'\',this)" onkeydown="bdCostCellKey(event,\''+e.id+'\',this)" style="padding:0;white-space:nowrap;cursor:pointer;outline:none;position:relative" class="raw-cost-cell">'
+        +'<div style="margin:5px 10px;padding:4px 12px;border-radius:6px;background:'+costM.bg+';color:'+costM.clr+';font-size:12px;font-weight:600;letter-spacing:.02em;text-align:center;user-select:text">'+costM.label+'</div>'
+        +'<div class="rtc-handle" onmousedown="bdCostFillStart(event,\''+e.id+'\')"></div>'
         +'</td>'
         +'</tr>';
     });
@@ -2433,7 +2530,7 @@
   document.getElementById("logoutBtn").addEventListener("click",function(){
     clearSession();
     currentUser=null;
-    bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; bdSortedOrder=null; bdView='overview';
+    bdOverrides={}; bdCustomCats=[]; bdTypeOverrides={}; bdCostOverrides={}; bdSortedOrder=null; bdView='overview';
     state=JSON.parse(JSON.stringify(DEFAULT));
     document.getElementById("mainWrap").style.display="none";
     document.getElementById("authScreen").classList.remove("hidden");
