@@ -562,6 +562,7 @@
   var selMonth = null;
   var cfCompact = false;
   var typeFilter = null; // null | 'in' | 'out'
+  var acctFilter = null; // null | account name
 
   // ---- storage ----
   var store = {
@@ -732,9 +733,12 @@
         '</div>'+(a.change?'<div class="chip '+(String(a.change).indexOf("-")===0?"down":"up")+'">'+esc(a.change)+'</div>':'')+'</div>'+
         '<div class="card-bal'+(m.neg?" neg":"")+'">'+(m.neg?"−":"")+'$'+m.d+'<span class="c">.'+m.c+'</span></div>'+
         '<div class="card-sub">'+esc(a.sub||"")+'</div>';
+      if(acctFilter===a.name) card.style.outline="2px solid "+((a.color&&a.color.match(/^#/))?a.color+"99":"rgba(255,255,255,.35)");
       card.addEventListener("click", function(ev){
         if(ev.target.closest("[data-del-acct]")) return;
-        if(editing) openAccount(a.id);
+        if(editing){ openAccount(a.id); return; }
+        acctFilter = acctFilter===a.name ? null : a.name;
+        render();
       });
       grid.appendChild(card);
     });
@@ -754,6 +758,7 @@
     } else {
       var filtered=state.entries.filter(function(e){
         if(typeFilter && e.type!==typeFilter) return false;
+        if(acctFilter && e.account!==acctFilter) return false;
         if(!searchQ) return true;
         return (e.title||"").toLowerCase().indexOf(searchQ)>=0||
                (e.account||"").toLowerCase().indexOf(searchQ)>=0||
