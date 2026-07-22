@@ -1721,6 +1721,34 @@
       html += '<div style="height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;margin-top:12px'+(isOpen&&txs.length>0?';margin-bottom:4px':'')+'"><div style="height:100%;border-radius:999px;background:'+col+';width:'+pct.toFixed(2)+'%"></div></div>';
 
       if(isOpen && txs.length>0){
+        // mini bar chart
+        var chartTxs=txs.slice(0,7);
+        var chartRest=txs.slice(7);
+        var chartRestTotal=chartRest.reduce(function(s,e){return s+(e.amount||0);},0);
+        var chartMax=Math.max.apply(null,chartTxs.map(function(e){return e.amount||0;}).concat(chartRestTotal>0?[chartRestTotal]:[]));
+        html+='<div style="margin:14px 0 10px;padding:14px;background:rgba(0,0,0,.22);border-radius:12px">';
+        chartTxs.forEach(function(e){
+          var bpct=chartMax>0?((e.amount||0)/chartMax*100):0;
+          html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
+            +'<div style="width:108px;font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0" title="'+e.title+'">'+e.title+'</div>'
+            +'<div style="flex:1;background:rgba(255,255,255,.07);border-radius:4px;height:20px;overflow:hidden">'
+            +'<div style="height:100%;border-radius:4px;background:'+col+';width:'+bpct.toFixed(1)+'%;min-width:3px"></div>'
+            +'</div>'
+            +'<div style="width:72px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums;flex-shrink:0;color:rgba(255,255,255,.8)">'+fmtAmt(e.amount)+'</div>'
+            +'</div>';
+        });
+        if(chartRest.length>0){
+          var rpct=chartMax>0?(chartRestTotal/chartMax*100):0;
+          html+='<div style="display:flex;align-items:center;gap:8px;padding-top:7px;margin-top:2px;border-top:1px solid rgba(255,255,255,.07)">'
+            +'<div style="width:108px;font-size:11px;color:rgba(255,255,255,.35);flex-shrink:0">Remaining ('+chartRest.length+')</div>'
+            +'<div style="flex:1;background:rgba(255,255,255,.07);border-radius:4px;height:20px;overflow:hidden">'
+            +'<div style="height:100%;border-radius:4px;background:rgba(255,255,255,.18);width:'+rpct.toFixed(1)+'%;min-width:3px"></div>'
+            +'</div>'
+            +'<div style="width:72px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums;flex-shrink:0;color:rgba(255,255,255,.35)">'+fmtAmt(chartRestTotal)+'</div>'
+            +'</div>';
+        }
+        html+='</div>';
+
         for(var i=0;i<showCount;i++){
           var e=txs[i];
           var eid=e.id;
