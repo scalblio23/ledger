@@ -2508,7 +2508,7 @@
 
       var catOpts = allCatNames.map(function(n){ return '<option value="'+n+'"'+(n===cat?' selected':'')+'>'+n+'</option>'; }).join('');
       catOpts += '<option value="__new__">+ New…</option>';
-      var catSel = '<select style="'+selStyle+'" onchange="bdMoveTx(\''+e.id+'\',this.value,this)">'+catOpts+'</select>';
+      var catSel = '<select style="'+selStyle+'" onchange="bdMoveTx(\''+e.id+'\',this)">'+catOpts+'</select>';
 
       var typeBg = typeVal==='personal' ? 'rgba(168,139,250,.15)' : 'rgba(99,102,241,.15)';
       var typeClr = typeVal==='personal' ? '#C4B5FD' : '#818CF8';
