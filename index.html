@@ -2305,19 +2305,36 @@
     h += tile('Overhead',fmt(totalOverhead),'Running costs','#34D399');
     h += '</div>';
 
-    // compute span in days from earliest to latest dated entry
-    var dates = state.entries.filter(function(e){ return e.date; }).map(function(e){ return e.date; }).sort();
-    var spanDays = 1;
-    if(dates.length >= 2){
-      var d0 = new Date(dates[0]), d1 = new Date(dates[dates.length-1]);
-      var diff = Math.round((d1-d0)/86400000);
-      if(diff > 0) spanDays = diff;
-    }
+    // compute profit for current month, week, and today
+    var now = new Date();
+    var todayStr = now.toISOString().slice(0,10);
+    // start of current week (Monday)
+    var dow = now.getDay(); // 0=Sun
+    var diffToMon = (dow===0) ? 6 : dow-1;
+    var weekStart = new Date(now); weekStart.setDate(now.getDate()-diffToMon); weekStart.setHours(0,0,0,0);
+    var weekStartStr = weekStart.toISOString().slice(0,10);
+    // start of current month
+    var monthStartStr = todayStr.slice(0,7)+'-01';
 
-    var dailyProfit  = netProfit / spanDays;
-    var weeklyProfit = dailyProfit * 7;
-    var monthlyProfit= dailyProfit * 30;
-    var npClr2 = netProfit>=0 ? '#4ADE80' : '#F87171';
+    var profitToday=0, profitWeek=0, profitMonth=0;
+    state.entries.forEach(function(e){
+      if(!e.date || isBdTransfer(e)) return;
+      var sign = e.type==='in' ? 1 : e.type==='out' ? -1 : 0;
+      if(!sign) return;
+      var amt = (e.amount||0) * sign;
+      // subtract cost from outflows (COGS/overhead are negative already via sign=-1)
+      if(e.date === todayStr) profitToday += amt;
+      if(e.date >= weekStartStr) profitWeek += amt;
+      if(e.date >= monthStartStr) profitMonth += amt;
+    });
+
+    function periodClr(v){ return v>=0?'#4ADE80':'#F87171'; }
+
+    // month label e.g. "Jul 1–22"
+    var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var mName = monthNames[now.getMonth()];
+    var mDay  = now.getDate();
+    var wDay0 = weekStart.getDate(), wMon0 = monthNames[weekStart.getMonth()];
 
     function atile(label, val, sub, color){
       return '<div style="background:var(--card);border-radius:14px;padding:14px 20px;flex:1;min-width:130px">'
@@ -2328,9 +2345,9 @@
     }
 
     h += '<div style="display:flex;gap:10px;flex-wrap:wrap">';
-    h += atile('Daily Avg', fmt(dailyProfit), 'Net profit per day', npClr2);
-    h += atile('Weekly Avg', fmt(weeklyProfit), 'Net profit per week', npClr2);
-    h += atile('Monthly Avg', fmt(monthlyProfit), 'Net profit per month', npClr2);
+    h += atile('This Month', fmt(profitMonth), mName+' 1–'+mDay, periodClr(profitMonth));
+    h += atile('This Week',  fmt(profitWeek),  wMon0+' '+wDay0+'–today', periodClr(profitWeek));
+    h += atile('Today',      fmt(profitToday), todayStr, periodClr(profitToday));
     h += '</div>';
 
     return h;
