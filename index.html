@@ -1144,7 +1144,8 @@
     var fillD=pathD+" L"+pts[pts.length-1][0].toFixed(1)+","+(H+2)+" L"+pts[0][0].toFixed(1)+","+(H+2)+" Z";
 
     var endBal=points[points.length-1].bal;
-    var lineColor=endBal>=base?"#4ADE80":"#F87171";
+    var startBal2=points[0].bal;
+    var lineColor=endBal>=startBal2?"#4ADE80":"#F87171";
 
     // today static marker
     var todayMarker="";
@@ -1157,7 +1158,7 @@
         '<div class="cf-chart-meta">'+
           '<div>'+
             '<div class="cf-chart-label" id="cfHoverDate">Balance projection · '+monthLabel(selMonth)+'</div>'+
-            '<div class="cf-chart-bal" id="cfHoverBal">'+fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span></div>'+
+            '<div class="cf-chart-bal" id="cfHoverBal">'+fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=startBal2?"var(--pos)":"var(--neg)")+'">'+(endBal>=startBal2?"▲":"▼")+' end of month</span></div>'+
           '</div>'+
           '<div style="display:flex;gap:24px;text-align:right">'+
             (isCurMonth?'<div><div class="cf-chart-label">Current</div><div style="font-size:14px;font-variant-numeric:tabular-nums;margin-top:2px;color:'+lineColor+'">'+fmtBal(points[days.indexOf(today)>=0?days.indexOf(today):0].bal)+'</div></div>':'')+
@@ -1194,7 +1195,7 @@
     var hoverBal=document.getElementById("cfHoverBal");
     var hoverDate=document.getElementById("cfHoverDate");
     var defaultLabel="Balance projection · "+monthLabel(selMonth);
-    var defaultBal=fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=base?"var(--pos)":"var(--neg)")+'">'+(endBal>=base?"▲":"▼")+' end of month</span>';
+    var defaultBal=fmtBal(endBal)+'<span style="font-size:12px;margin-left:8px;color:'+(endBal>=startBal2?"var(--pos)":"var(--neg)")+'">'+(endBal>=startBal2?"▲":"▼")+' end of month</span>';
 
     var tooltip=document.getElementById("cfTooltip");
     if(!svg) return;
